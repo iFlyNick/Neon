@@ -1,0 +1,22 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.idea/.idea.Neon/.idea
+/.vs
+/Neon.Account.Api/bin/Debug/net9.0
+/Neon.Account.Api/logs
+/Neon.Account.Api/obj
+/Neon.Core/bin/Debug/net9.0
+/Neon.Core/obj
+/Neon.DbSyncService/obj
+/Neon.Emotes.Api/obj
+/Neon.Kafka.Api/obj
+/Neon.Obs.Api/obj
+/Neon.Persistence/bin/Debug/net9.0
+/Neon.Persistence/obj
+/Neon.TwitchService/bin/Debug/net9.0
+/Neon.TwitchService/logs
+/Neon.TwitchService/obj
+/src/Neon.Twitch/bin/Debug/net9.0
+/src/Neon.Twitch/obj
