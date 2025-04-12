@@ -17,7 +17,7 @@ namespace Neon.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -27,55 +27,67 @@ namespace Neon.Persistence.Migrations
                     b.Property<Guid>("BotAccountId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
+                        .HasColumnName("bot_account_id")
                         .HasColumnOrder(1);
 
                     b.Property<string>("AccessToken")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("access_token");
 
                     b.Property<string>("BotName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("bot_name");
 
                     b.Property<string>("ClientId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("client_id");
 
                     b.Property<string>("ClientSecret")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("client_secret");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by")
                         .HasColumnOrder(3);
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_date")
                         .HasColumnOrder(2);
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
+                        .HasColumnName("modified_by")
                         .HasColumnOrder(5);
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_date")
                         .HasColumnOrder(4);
 
                     b.Property<string>("RedirectUri")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("redirect_uri");
 
                     b.Property<string>("TwitchBroadcasterId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("twitch_broadcaster_id");
 
-                    b.HasKey("BotAccountId");
+                    b.HasKey("BotAccountId")
+                        .HasName("pk_bot_account");
 
-                    b.ToTable("BotAccount", "Twitch");
+                    b.ToTable("bot_account", "twitch");
                 });
 
             modelBuilder.Entity("Neon.Persistence.EntityModels.Twitch.TwitchAccount", b =>
@@ -83,97 +95,120 @@ namespace Neon.Persistence.Migrations
                     b.Property<Guid>("TwitchAccountId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
+                        .HasColumnName("twitch_account_id")
                         .HasColumnOrder(1);
 
                     b.Property<string>("AccessToken")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("access_token");
 
                     b.Property<DateTime?>("AccessTokenRefreshDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("access_token_refresh_date");
 
                     b.Property<DateTime>("AccountCreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("account_created_date");
 
                     b.Property<string>("AuthorizationCode")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("authorization_code");
 
                     b.Property<string>("AuthorizationScopes")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("authorization_scopes");
 
                     b.Property<string>("BroadcasterId")
                         .IsRequired()
                         .HasMaxLength(25)
-                        .HasColumnType("character varying(25)");
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("broadcaster_id");
 
                     b.Property<string>("BroadcasterType")
                         .IsRequired()
                         .HasMaxLength(25)
-                        .HasColumnType("character varying(25)");
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("broadcaster_type");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by")
                         .HasColumnOrder(3);
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_date")
                         .HasColumnOrder(2);
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("display_name");
 
                     b.Property<bool?>("IsAuthorizationRevoked")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_authorization_revoked");
 
                     b.Property<string>("LoginName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("login_name");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
+                        .HasColumnName("modified_by")
                         .HasColumnOrder(5);
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_date")
                         .HasColumnOrder(4);
 
                     b.Property<DateTime?>("NeonAuthorizationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("neon_authorization_date");
 
                     b.Property<DateTime?>("NeonAuthorizationRevokeDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("neon_authorization_revoke_date");
 
                     b.Property<string>("OfflineImageUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("offline_image_url");
 
                     b.Property<string>("ProfileImageUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("profile_image_url");
 
                     b.Property<string>("RefreshToken")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("refresh_token");
 
                     b.Property<string>("Type")
                         .HasMaxLength(25)
-                        .HasColumnType("character varying(25)");
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("type");
 
                     b.Property<string>("WebSocketChatUrl")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("web_socket_chat_url");
 
-                    b.HasKey("TwitchAccountId");
+                    b.HasKey("TwitchAccountId")
+                        .HasName("pk_twitch_account");
 
-                    b.ToTable("TwitchAccount", "Twitch");
+                    b.ToTable("twitch_account", "twitch");
                 });
 #pragma warning restore 612, 618
         }

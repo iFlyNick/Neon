@@ -11,7 +11,7 @@ public static class NeonDbExtensions
     {
         services.AddDbContext<NeonDbContext>(options =>
         {
-            options.UseNpgsql(config.GetConnectionString("NeonDb"));
+            options.UseNpgsql(config.GetConnectionString("NeonDb")).UseSnakeCaseNamingConvention();
         });
         return services;
     }

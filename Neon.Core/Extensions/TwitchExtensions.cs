@@ -14,7 +14,7 @@ public static class TwitchExtensions
         services.AddScoped<IHelixService, HelixService>();
         services.AddScoped<IBotTokenService, BotTokenService>();
         services.AddScoped<IUserTokenService, UserTokenService>();
-        services.AddScoped<IOAuthService, OAuthService>();
+        services.AddSingleton<IOAuthService, OAuthService>();
 
         return services;
     }
