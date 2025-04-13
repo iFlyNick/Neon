@@ -18,7 +18,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.Configure<NeonSettings>(hostContext.Configuration.GetSection("NeonSettings"));
 
         //use named clients instead to avoid swapping auth headers around
-        services.AddHttpClient<IHttpService, HttpService>();
+        services.AddHttpClient();
+        services.AddTransient<IHttpService, HttpService>();
 
         services.AddTransient<IKafkaService, KafkaService>();
 
@@ -36,7 +37,7 @@ await wsManagerService.Subscribe("iflynick");
 
 var botWsManagerService = scope.ServiceProvider.GetRequiredService<IWebSocketManager>();
 await botWsManagerService.SubscribeBotToChat("TheNeonBot", "iflynick");
-await botWsManagerService.SubscribeBotToChat("TheNeonBot", null, "410577032");
+//await botWsManagerService.SubscribeBotToChat("TheNeonBot", null, "410577032");
 
 await Task.Delay(2000);
 await helixService.SendMessageAsBot("The bot is connected! BEEP BOOP.", "801173166", "114177217");

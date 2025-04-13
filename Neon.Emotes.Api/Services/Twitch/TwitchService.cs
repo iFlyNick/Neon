@@ -9,15 +9,6 @@ public class TwitchService(ILogger<TwitchService> logger, IHelixService helixSer
     private readonly ILogger<TwitchService> _logger = logger;
     private readonly IHelixService _helixService = helixService;
 
-    public async Task<List<ProviderEmote>?> GetGlobalEmotes(CancellationToken ct = default)
-    {
-        var helixRespString = await _helixService.GetGlobalEmotes(ct);
-
-        var emotes = ConvertApiRespToProviderEmotes(helixRespString);
-
-        return emotes;
-    }
-
     public async Task<List<ProviderEmote>?> GetEmotes(string? broadcasterId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId))
@@ -27,6 +18,15 @@ public class TwitchService(ILogger<TwitchService> logger, IHelixService helixSer
         }
 
         var helixRespString = await _helixService.GetChannelEmotes(broadcasterId, ct);
+
+        var emotes = ConvertApiRespToProviderEmotes(helixRespString);
+
+        return emotes;
+    }
+
+    public async Task<List<ProviderEmote>?> GetGlobalEmotes(CancellationToken ct = default)
+    {
+        var helixRespString = await _helixService.GetGlobalEmotes(ct);
 
         var emotes = ConvertApiRespToProviderEmotes(helixRespString);
 

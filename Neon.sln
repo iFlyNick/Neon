@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Core", "Neon.Core\Neon
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Persistence", "Neon.Persistence\Neon.Persistence.csproj", "{4C6EC0D0-453B-413E-BBE5-78CA035732E8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.TwitchMessageService", "Neon.TwitchMessageService\Neon.TwitchMessageService.csproj", "{F74389D2-E863-4BE3-BBCC-A723C21963A9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,8 +59,15 @@ Global
 		{4C6EC0D0-453B-413E-BBE5-78CA035732E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C6EC0D0-453B-413E-BBE5-78CA035732E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C6EC0D0-453B-413E-BBE5-78CA035732E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F74389D2-E863-4BE3-BBCC-A723C21963A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F74389D2-E863-4BE3-BBCC-A723C21963A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F74389D2-E863-4BE3-BBCC-A723C21963A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F74389D2-E863-4BE3-BBCC-A723C21963A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1F29A4D5-2914-4368-86AB-9D93E910E8FC}
 	EndGlobalSection
 EndGlobal
