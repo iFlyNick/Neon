@@ -87,9 +87,9 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
 
         var tokenizedMessage = twitchMessage.Payload.Event.TwitchMessage.Text.Split(' ');
 
-        var processedMessageParts = new List<string>(); 
+        var processedMessageParts = new List<string>();
 
-        foreach(var msg in tokenizedMessage)
+        foreach (var msg in tokenizedMessage)
         {
             if (allEmotes is null || allEmotes.Count == 0)
             {

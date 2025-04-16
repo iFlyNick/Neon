@@ -13,11 +13,11 @@ public class HttpService(ILogger<HttpService> logger, IHttpClientFactory httpCli
         ArgumentException.ThrowIfNullOrEmpty(method, nameof(method));
         ArgumentException.ThrowIfNullOrEmpty(url, nameof(url));
 
-        if (!method.Equals("GET"))
-        {
-            ArgumentNullException.ThrowIfNull(content, nameof(content));
-            ArgumentException.ThrowIfNullOrEmpty(contentType, nameof(contentType));
-        }
+        //if (!method.Equals("GET"))
+        //{
+        //    ArgumentNullException.ThrowIfNull(content, nameof(content));
+        //    ArgumentException.ThrowIfNullOrEmpty(contentType, nameof(contentType));
+        //}
 
         httpClient.DefaultRequestHeaders.Clear();
 

@@ -10,9 +10,10 @@ var host = Host.CreateDefaultBuilder(args)
         services.ConfigureRedis(hostContext.Configuration);
         services.ConfigureSerilog(hostContext.Configuration);
 
-        services.AddHttpClient<IHttpService, HttpService>();
+        services.AddHttpClient();
+        services.AddTransient<IHttpService, HttpService>();
 
-        services.AddSingleton<IKafkaService, KafkaService>();
+        services.AddTransient<IKafkaService, KafkaService>();
         services.AddScoped<ITwitchMessageService, TwitchMessageService>();
 
         services.AddHostedService<TwitchMessageConsumer>();
