@@ -28,7 +28,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
                 return;
             }
 
-            consumer.Assign(new TopicPartitionOffset(config.Topic, new Partition(partition), Offset.Beginning));
+            consumer.Assign(new TopicPartitionOffset(config.Topic, new Partition(partition), Offset.End));
 
             while (!ct.IsCancellationRequested)
             {

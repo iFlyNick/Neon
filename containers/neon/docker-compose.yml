@@ -102,6 +102,8 @@ services:
     container_name: redisinsight
     ports:
       - "5540:5540"
+    volumes:
+      - redisinsight:/db
     depends_on:
       redis:
         condition: service_healthy
@@ -153,7 +155,7 @@ services:
       - DOTNET_ENVIRONMENT=Development
       - ConnectionStrings__Redis=redis:6379
       - AppBaseConfig__KafkaBootstrapServers=kafka:29092
-      - AppBaseConfig__EmoteApi=http://emote-service:5001
+      - AppBaseConfig__EmoteApi=http://emote-service:8080
     depends_on:
       kafka:
         condition: service_healthy
@@ -170,6 +172,7 @@ volumes:
   kafka-ui:
   pg-admin:
   redis-data:
+  redisinsight:
 
 networks:
   neon_network:

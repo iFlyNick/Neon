@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Neon.Core\Neon.Core.csproj" />
-    <ProjectReference Include="..\Neon.TwitchService\Neon.TwitchService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
