@@ -65,6 +65,10 @@ public class Event
     public TwitchMessage? TwitchMessage { get; set; }
     [JsonProperty("message_type")]
     public string? MessageType { get; set; }
+    [JsonProperty("badges")]
+    public List<Badge>? Badges { get; set; }
+    [JsonProperty("color")]
+    public string? Color { get; set; }
     [JsonProperty("title")]
     public string? Title { get; set; }
     [JsonProperty("category_id")]

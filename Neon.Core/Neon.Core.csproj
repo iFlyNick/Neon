@@ -32,8 +32,4 @@
     <ProjectReference Include="..\Neon.Persistence\Neon.Persistence.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\Twitch\EventSub\" />
-  </ItemGroup>
-
 </Project>

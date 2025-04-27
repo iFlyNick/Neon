@@ -144,7 +144,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         {
             Message = processedMessage,
             ChannelName = twitchMessage.Payload.Event.BroadcasterUserName,
-            ChatterName = twitchMessage.Payload.Event.ChatterUserName
+            ChatterName = twitchMessage.Payload.Event.ChatterUserName,
+            ChatterColor = twitchMessage.Payload.Event.Color
         };
 
         return retVal;

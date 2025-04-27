@@ -230,4 +230,98 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
             return null;
         }
     }
+
+    public async Task<string?> GetGlobalBadges(CancellationToken ct = default)
+    {
+        //need to use app access token to call out to global badges api
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
+        var appAccessResponse = await _appTokenService.GetAppAccountAuthAsync(ct);
+
+        if (string.IsNullOrEmpty(appClientId))
+        {
+            _logger.LogError("Failed to fetch app client id from database!");
+            return null;
+        }
+
+        if (appAccessResponse is null || string.IsNullOrEmpty(appAccessResponse.AccessToken))
+        {
+            _logger.LogError("Failed to fetch app access token from database!");
+            return null;
+        }
+
+        var helixUrl = _twitchSettings.HelixApiUrl;
+        var globalBadgesUrl = $"{helixUrl}/chat/badges/global";
+
+        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessResponse.AccessToken);
+
+        var headers = new Dictionary<string, string>
+        {
+            { "Client-Id", appClientId }
+        };
+
+        try
+        {
+            var response = await _httpService.GetAsync(globalBadgesUrl, authHeader, headers, ct);
+
+            if (response is null || !response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch global badges from Twitch Helix API. Status code: {StatusCode}", response?.StatusCode);
+                return null;
+            }
+
+            return await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch global badges from Twitch Helix API. Status code: {StatusCode}", ex.Message);
+            return null;
+        }
+    }
+    
+    public async Task<string?> GetChannelBadges(string? broadcasterId, CancellationToken ct = default)
+    {
+        //need to use app access token to call out to channel badge api
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
+        var appAccessResponse = await _appTokenService.GetAppAccountAuthAsync(ct);
+
+        if (string.IsNullOrEmpty(appClientId))
+        {
+            _logger.LogError("Failed to fetch app client id from database!");
+            return null;
+        }
+
+        if (appAccessResponse is null || string.IsNullOrEmpty(appAccessResponse.AccessToken))
+        {
+            _logger.LogError("Failed to fetch app access token from database!");
+            return null;
+        }
+
+        var helixUrl = _twitchSettings.HelixApiUrl;
+        var channelBadgesUrl = $"{helixUrl}/chat/badges?broadcaster_id={broadcasterId}";
+
+        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessResponse.AccessToken);
+
+        var headers = new Dictionary<string, string>
+        {
+            { "Client-Id", appClientId }
+        };
+
+        try
+        {
+            var response = await _httpService.GetAsync(channelBadgesUrl, authHeader, headers, ct);
+
+            if (response is null || !response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch channel badges from Twitch Helix API. Status code: {StatusCode}", response?.StatusCode);
+                return null;
+            }
+
+            return await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch channel badges from Twitch Helix API. Status code: {StatusCode}", ex.Message);
+            return null;
+        }
+    }
 }
