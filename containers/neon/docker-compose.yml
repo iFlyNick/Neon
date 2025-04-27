@@ -1,3 +1,6 @@
+x-variables:
+  base_app_path: C:/Users/nickb/Documents/Coding/Projects/neon
+
 services:
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -94,6 +97,23 @@ services:
     container_name: redisinsight
     ports:
       - "5540:5540"
+    networks:
+      - neon_network
+        
+  twitch-service:
+    build:
+      context: ${base_app_path}/Neon.TwitchService
+      dockerfile: Dockerfile
+    container_name: twitch-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__NeonDb = Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - BaseKafkaConfig__BootstrapServers = kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - neon_network
 

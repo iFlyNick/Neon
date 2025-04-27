@@ -14,9 +14,7 @@ namespace Neon.TwitchService.Services.WebSockets;
 
 public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchSettings> twitchSettings, IHttpService httpService) : IWebSocketService
 {
-    private readonly ILogger<WebSocketService> _logger = logger;
     private readonly TwitchSettings _twitchSettings = twitchSettings.Value ?? throw new ArgumentNullException(nameof(_twitchSettings));
-    private readonly IHttpService _httpService = httpService;
 
     private readonly List<string> _skippableMessages = [ "session_welcome" ];
 
@@ -38,7 +36,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     {
         if (callback is null)
         {
-            _logger.LogError("Callback is null, unable to send messages back from websocket when received.");
+            logger.LogError("Callback is null, unable to send messages back from websocket when received.");
             ArgumentNullException.ThrowIfNull(callback, nameof(callback));
         }
 
@@ -46,26 +44,26 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         {
             if (_isConnected)
             {
-                _logger.LogWarning("Client is already connected");
+                logger.LogWarning("Client is already connected");
                 return;
             }
 
-            _logger.LogInformation("Reconnecting websocket at {time}", DateTime.UtcNow);
+            logger.LogInformation("Reconnecting websocket at {time}", DateTime.UtcNow);
             await ReconnectAsync(callback, ct);
         }
 
         if (string.IsNullOrEmpty(_twitchSettings.EventSubUrl))
         {
-            _logger.LogError("Twitch settings is missing event sub url for websocket connection. EventSubUrl: {url}", _twitchSettings.EventSubUrl);
+            logger.LogError("Twitch settings is missing event sub url for websocket connection. EventSubUrl: {url}", _twitchSettings.EventSubUrl);
             ArgumentNullException.ThrowIfNull(_twitchSettings.EventSubUrl, nameof(_twitchSettings.EventSubUrl));
         }
 
-        _logger.LogInformation("Connecting websocket at {time}", DateTime.UtcNow);
+        logger.LogInformation("Connecting websocket at {time}", DateTime.UtcNow);
         Client = new ClientWebSocket();
 
         await Client.ConnectAsync(new Uri(_twitchSettings.EventSubUrl), ct);
 
-        _logger.LogInformation("Websocket connected at {time}. Hash: {hash}", DateTime.UtcNow, GetHashCode());
+        logger.LogInformation("Websocket connected at {time}. Hash: {hash}", DateTime.UtcNow, GetHashCode());
 
         _ = Task.Run(async () => await ListenAsync(callback, ct), ct);
     }
@@ -74,17 +72,17 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     {
         if (Client is null)
         {
-            _logger.LogWarning("Client is already disconnected");
+            logger.LogWarning("Client is already disconnected");
             return;
         }
 
         if (!_isConnected)
         {
-            _logger.LogWarning("Client is already disconnected");
+            logger.LogWarning("Client is already disconnected");
             return;
         }
 
-        _logger.LogInformation("Disconnecting websocket at {time}", DateTime.UtcNow);
+        logger.LogInformation("Disconnecting websocket at {time}", DateTime.UtcNow);
 
         try
         {
@@ -92,7 +90,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error disconnecting websocket");
+            logger.LogError(ex, "Error disconnecting websocket");
         }
     }
 
@@ -102,14 +100,14 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         if (string.IsNullOrEmpty(_botSettings.AccessToken) || string.IsNullOrEmpty(_botSettings.ClientId))
         {
-            _logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
+            logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
             ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
             ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
         if (string.IsNullOrEmpty(channel))
         {
-            _logger.LogWarning("Channel is null or empty. Skipping subscription");
+            logger.LogWarning("Channel is null or empty. Skipping subscription");
             return;
         }
 
@@ -121,27 +119,27 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         var subscriptions = new List<(string, string)>
         {
-            { ("channel.chat.message", "1") },
-            { ("channel.chat.notification", "1") },
-            { ("channel.chat.clear", "1") },
+            ("channel.chat.message", "1"),
+            ("channel.chat.notification", "1"),
+            ("channel.chat.clear", "1")
         };
 
         foreach (var subscription in subscriptions)
         {
-            var message = new Message()
+            var message = new Message
             {
-                Payload = new()
+                Payload = new Payload
                 {
-                    Subscription = new()
+                    Subscription = new Subscription
                     {
                         Type = subscription.Item1,
                         Version = subscription.Item2,
-                        Condition = new()
+                        Condition = new Condition
                         {
                             BroadcasterUserId = channel,
                             UserId = _botSettings.BroadcasterId
                         },
-                        Transport = new()
+                        Transport = new Transport
                         {
                             Method = "websocket",
                             SessionId = SessionId
@@ -154,11 +152,11 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
 
-            var resp = await _httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
+            var resp = await httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
 
             var respContent = await resp?.Content?.ReadAsStringAsync(ct);
 
-            _logger.LogInformation("Response from subscription: {response}", respContent);
+            logger.LogInformation("Response from subscription: {response}", respContent);
         }
     }
 
@@ -168,14 +166,14 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         if (string.IsNullOrEmpty(_botSettings.AccessToken) || string.IsNullOrEmpty(_botSettings.ClientId))
         {
-            _logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
+            logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
             ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
             ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
         if (string.IsNullOrEmpty(channel))
         {
-            _logger.LogWarning("Channel is null or empty. Skipping subscription");
+            logger.LogWarning("Channel is null or empty. Skipping subscription");
             return;
         }
 
@@ -187,40 +185,40 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         var subscriptions = new List<(string, string)>
         {
-            { ("channel.subscribe", "1") },
-            { ("channel.subscription.gift", "1") },
-            { ("channel.subscription.message", "1") },
-            { ("channel.channel_points_custom_reward_redemption.add", "1") },
-            { ("channel.channel_points_custom_reward_redemption.update", "1") },
-            { ("channel.ad_break.begin", "1") },
-            { ("channel.ban", "1") },
-            { ("channel.unban", "1") },
-            { ("channel.bits.use", "1") },
-            { ("channel.hype_train.begin", "1") },
-            { ("channel.hype_train.progress", "1") },
-            { ("channel.hype_train.end", "1") },
-            { ("channel.follow", "2") },
-            { ("channel.update", "2") },
-            { ("stream.online", "1") },
-            { ("stream.offline", "1") },
+            ("channel.subscribe", "1"),
+            ("channel.subscription.gift", "1"),
+            ("channel.subscription.message", "1"),
+            ("channel.channel_points_custom_reward_redemption.add", "1"),
+            ("channel.channel_points_custom_reward_redemption.update", "1"),
+            ("channel.ad_break.begin", "1"),
+            ("channel.ban", "1"),
+            ("channel.unban", "1"),
+            ("channel.bits.use", "1"),
+            ("channel.hype_train.begin", "1"),
+            ("channel.hype_train.progress", "1"),
+            ("channel.hype_train.end", "1"),
+            ("channel.follow", "2"),
+            ("channel.update", "2"),
+            ("stream.online", "1"),
+            ("stream.offline", "1")
         };
 
         foreach (var subscription in subscriptions)
         {
-            var message = new Message()
+            var message = new Message
             {
-                Payload = new()
+                Payload = new Payload
                 {
-                    Subscription = new()
+                    Subscription = new Subscription
                     {
                         Type = subscription.Item1,
                         Version = subscription.Item2,
-                        Condition = new()
+                        Condition = new Condition
                         {
                             BroadcasterUserId = channel,
                             ModeratorUserId = subscription.Item1.Equals("channel.follow") ? channel : null
                         },
-                        Transport = new()
+                        Transport = new Transport
                         {
                             Method = "websocket",
                             SessionId = SessionId
@@ -233,11 +231,11 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
 
-            var resp = await _httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
+            var resp = await httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
 
             var respContent = await resp?.Content?.ReadAsStringAsync();
 
-            _logger.LogInformation("Response from subscription: {response}", respContent);
+            logger.LogInformation("Response from subscription: {response}", respContent);
         }
     }
 
@@ -262,7 +260,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             if (result.MessageType == WebSocketMessageType.Close || Client.State == WebSocketState.CloseReceived)
             {
-                _logger.LogWarning("Websocket connection closed. Reason: {reason}", result.CloseStatusDescription);
+                logger.LogWarning("Websocket connection closed. Reason: {reason}", result.CloseStatusDescription);
                 await DisconnectAsync(ct);
                 break;
             }
@@ -291,7 +289,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deserializing message from twitch: {message}", message);
+            logger.LogError(ex, "Error deserializing message from twitch: {message}", message);
         }
 
         //_logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);

@@ -1,21 +1,20 @@
-﻿using Neon.Core.Data.Twitch;
+﻿using Microsoft.Extensions.Options;
+using Neon.Core.Data.Twitch;
 using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Kafka;
 using Neon.Core.Services.Twitch.Authentication;
+using Neon.TwitchService.Models.Kafka;
 using Neon.TwitchService.Services.WebSockets;
 using Newtonsoft.Json;
 
 namespace Neon.TwitchService.Services.WebSocketManagers;
 
-public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOAuthService oAuthService) : IWebSocketManager
+public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKafkaConfig> baseKafkaSettings, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOAuthService oAuthService) : IWebSocketManager
 {
-    private readonly ILogger<WebSocketManager> _logger = logger;
-    private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory;
-
-    //TODO: maybe dont put these here long term
-    private readonly IKafkaService _kafkaService = kafkaService;
-    private readonly IOAuthService _oAuthService = oAuthService;
+    private readonly BaseKafkaConfig _baseKafkaConfig = baseKafkaSettings.Value ?? throw new ArgumentNullException(nameof(baseKafkaSettings));
+    
+    //TODO: maybe dont put the kafka/oauth service in the constructor long term
 
     //additionally holds neon bot for sending chat messages
     //channel name : iwebsocketservice
@@ -28,13 +27,13 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         if (_webSocketServices.TryGetValue(broadcasterName, out var webSocketService))
         {
-            _logger.LogDebug("Already subscribed to {broadcasterName}", broadcasterName);
+            logger.LogDebug("Already subscribed to {broadcasterName}", broadcasterName);
             return;
         }
 
-        _logger.LogDebug("Subscribing to {broadcasterName}", broadcasterName);
+        logger.LogDebug("Subscribing to {broadcasterName}", broadcasterName);
 
-        using var scope = _serviceScopeFactory.CreateScope();
+        using var scope = serviceScopeFactory.CreateScope();
 
         var wsService = scope.ServiceProvider.GetRequiredService<IWebSocketService>();
 
@@ -42,14 +41,14 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         await wsService.ConnectAsync(async twitchMessage =>
         {
-            _logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
+            logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
             
-            await _kafkaService.ProduceAsync(new KafkaProducerConfig
+            await kafkaService.ProduceAsync(new KafkaProducerConfig
             {
                 Topic = "twitch-channel-events",
                 TargetPartition = "0",
-                BootstrapServers = "localhost:9092"
-            }, JsonConvert.SerializeObject(twitchMessage));
+                BootstrapServers = _baseKafkaConfig.BootstrapServers
+            }, JsonConvert.SerializeObject(twitchMessage), null, ct);
         }, ct);
 
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat
@@ -73,17 +72,17 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
 
-        var oAuthValidation = await _oAuthService.ValidateOAuthToken(broadcasterAccount.AccessToken, ct);
+        var oAuthValidation = await oAuthService.ValidateOAuthToken(broadcasterAccount.AccessToken, ct);
 
         //user auth failed, need to reauth
         if (oAuthValidation is null)
         {
-            _logger.LogDebug("Access token needs refreshed or is invalid for account: {broadcasterName}", broadcasterName);
-            var oAuthResp = await _oAuthService.GetUserAuthTokenFromRefresh(botAccount.ClientId, botAccount.ClientSecret, broadcasterAccount.RefreshToken);
+            logger.LogDebug("Access token needs refreshed or is invalid for account: {broadcasterName}", broadcasterName);
+            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(botAccount.ClientId, botAccount.ClientSecret, broadcasterAccount.RefreshToken);
 
             if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
             {
-                _logger.LogError("Failed to refresh access token for account: {broadcasterName}", broadcasterName);
+                logger.LogError("Failed to refresh access token for account: {broadcasterName}", broadcasterName);
                 return;
             }
 
@@ -93,7 +92,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
             _ = await twitchDbService.UpsertTwitchAccountAsync(broadcasterAccount, ct);
         }
 
-        //now we have a valid access token for the person we're about to subscribe to, so call the subscribe on the ws
+        //now we have a valid access token for the person we're about to subscribe to, so call subscribe on the ws
         await wsService.SubscribeChannelAsync(broadcasterAccount.BroadcasterId, broadcasterAccount.AccessToken, null, ct);
     }
 
@@ -102,9 +101,9 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
         if (string.IsNullOrEmpty(botName) || (string.IsNullOrEmpty(broadcasterName) && string.IsNullOrEmpty(overrideBroadcasterId)))
             return;
 
-        _logger.LogDebug("Subscribing to chat: {broadcasterName}", broadcasterName);
+        logger.LogDebug("Subscribing to chat: {broadcasterName}", broadcasterName);
 
-        using var scope = _serviceScopeFactory.CreateScope();
+        using var scope = serviceScopeFactory.CreateScope();
 
         var wsService = scope.ServiceProvider.GetRequiredService<IWebSocketService>();
 
@@ -113,14 +112,14 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         await wsService.ConnectAsync(async twitchMessage =>
         {
-            _logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
+            logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
 
-            await _kafkaService.ProduceAsync(new KafkaProducerConfig
+            await kafkaService.ProduceAsync(new KafkaProducerConfig
             {
                 Topic = "twitch-channel-chats",
                 TargetPartition = "0",
                 BootstrapServers = "localhost:9092"
-            }, JsonConvert.SerializeObject(twitchMessage));
+            }, JsonConvert.SerializeObject(twitchMessage), null, ct);
         }, ct);
 
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat
@@ -145,17 +144,17 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
 
-        var oAuthValidation = await _oAuthService.ValidateOAuthToken(botAccount.AccessToken, ct);
+        var oAuthValidation = await oAuthService.ValidateOAuthToken(botAccount.AccessToken, ct);
 
         //bot auth failed, need to reauth
         if (oAuthValidation is null)
         {
-            _logger.LogDebug("Access token needs refreshed or is invalid for account: {botName}", botAccount.BroadcasterId);
-            var oAuthResp = await _oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, botAccount.RefreshToken);
+            logger.LogDebug("Access token needs refreshed or is invalid for account: {botName}", botAccount.BroadcasterId);
+            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, botAccount.RefreshToken);
 
             if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
             {
-                _logger.LogError("Failed to refresh access token for account: {botName}", botName);
+                logger.LogError("Failed to refresh access token for account: {botName}", botName);
                 return;
             }
 
@@ -165,7 +164,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
             _ = await twitchDbService.UpdateTwitchAccountAuthAsync(botAccount.BroadcasterId, botAccount.AccessToken, ct);
         }
 
-        _logger.LogDebug("Subscribing bot to chat for {broadcasterName}", broadcasterName);
+        logger.LogDebug("Subscribing bot to chat for {broadcasterName}", broadcasterName);
         await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, botAccount.AccessToken, null, ct);
     }
 
@@ -176,15 +175,15 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
 
         if (!_webSocketServices.TryGetValue(broadcasterName, out var webSocketService))
         {
-            _logger.LogDebug("Unable to find connection for given user to close. BroadcasterName: {broadcasterName}", broadcasterName);
+            logger.LogDebug("Unable to find connection for given user to close. BroadcasterName: {broadcasterName}", broadcasterName);
             return;
         }
 
-        _logger.LogDebug("Unsubscribing from {broadcasterName}", broadcasterName);
+        logger.LogDebug("Unsubscribing from {broadcasterName}", broadcasterName);
         await webSocketService.DisconnectAsync(ct);
 
         _webSocketServices.Remove(broadcasterName);
 
-        _logger.LogDebug("Unsubscribed from {broadcasterName}", broadcasterName);
+        logger.LogDebug("Unsubscribed from {broadcasterName}", broadcasterName);
     }
 }
