@@ -113,7 +113,6 @@ Project Neon
 
 - example event sub auth url
 	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=bits%3Aread%20channel%3Amoderate%20moderator%3Aread%3Afollowers%20channel%3Aread%3Asubscriptions%20channel%3Aread%3Aredemptions%20channel%3Aread%3Aads%20channel%3Aread%3Ahype_train%20channel%3Abot
-		- t07i9xbw205tlr8lgo8anvpe2sfqo2
 		
 - joining as theneonbot chat seems free cost no matter how many channels i join as
 	- sending a chat message to a channel requires the user to have approved the channel as a channel:bot scope, or a mod. so can only send to channels the bot has been approved in, despite being able to read from pretty much everything
