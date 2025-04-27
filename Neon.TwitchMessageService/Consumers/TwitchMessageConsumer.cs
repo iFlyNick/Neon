@@ -54,7 +54,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
             TargetPartition = _partitionKey,
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
             GroupId = _groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest
+            AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
 

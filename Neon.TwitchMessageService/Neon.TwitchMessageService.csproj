@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-Neon.TwitchMessageService-2fe5605d-622b-406e-b128-e0e7f45aac0f</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +15,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Neon.Core\Neon.Core.csproj" />
     <ProjectReference Include="..\Neon.TwitchService\Neon.TwitchService.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\.dockerignore">
+      <Link>.dockerignore</Link>
+    </Content>
   </ItemGroup>
 </Project>
