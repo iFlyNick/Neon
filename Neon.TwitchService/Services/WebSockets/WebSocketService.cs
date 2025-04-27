@@ -94,20 +94,26 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
     }
 
-    public async Task SubscribeChannelChatAsync(string? channel, string? accessToken, List<SubscriptionType>? subscriptionsTypes, CancellationToken ct = default)
+    public async Task SubscribeChannelChatAsync(string? twitchChannelId, string? userId, string? accessToken, List<SubscriptionType>? subscriptionsTypes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(_botSettings, nameof(_botSettings));
 
         if (string.IsNullOrEmpty(_botSettings.AccessToken) || string.IsNullOrEmpty(_botSettings.ClientId))
         {
             logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
-            ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
-            ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
+            ArgumentException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
+            ArgumentException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
-        if (string.IsNullOrEmpty(channel))
+        if (string.IsNullOrEmpty(twitchChannelId))
         {
-            logger.LogWarning("Channel is null or empty. Skipping subscription");
+            logger.LogWarning("TwitchChannelId is null or empty. Skipping subscription");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            logger.LogWarning("UserId is null or empty. Can't subscribe to channel chat without defining the user to connect as!");
             return;
         }
 
@@ -136,8 +142,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
                         Version = subscription.Item2,
                         Condition = new Condition
                         {
-                            BroadcasterUserId = channel,
-                            UserId = _botSettings.BroadcasterId
+                            BroadcasterUserId = twitchChannelId,
+                            UserId = userId
                         },
                         Transport = new Transport
                         {
@@ -154,7 +160,13 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             var resp = await httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
 
-            var respContent = await resp?.Content?.ReadAsStringAsync(ct);
+            if (resp is null || !resp.IsSuccessStatusCode)
+            {
+                logger.LogDebug("Failed to subscribe to channel chat. Response: {response}", resp?.StatusCode);
+                return;
+            }
+            
+            var respContent = await resp.Content.ReadAsStringAsync(ct);
 
             logger.LogInformation("Response from subscription: {response}", respContent);
         }
@@ -167,8 +179,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         if (string.IsNullOrEmpty(_botSettings.AccessToken) || string.IsNullOrEmpty(_botSettings.ClientId))
         {
             logger.LogError("Bot settings are missing access token or client id. Unable to subscribe to channel");
-            ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
-            ArgumentNullException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
+            ArgumentException.ThrowIfNullOrEmpty(_botSettings.AccessToken, nameof(_botSettings.AccessToken));
+            ArgumentException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
         if (string.IsNullOrEmpty(channel))
@@ -233,7 +245,13 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             var resp = await httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
 
-            var respContent = await resp?.Content?.ReadAsStringAsync();
+            if (resp is null || !resp.IsSuccessStatusCode)
+            {
+                logger.LogDebug("Failed to subscribe to channel events. Response: {response}", resp?.StatusCode);
+                return;
+            }
+            
+            var respContent = await resp.Content.ReadAsStringAsync(ct);
 
             logger.LogInformation("Response from subscription: {response}", respContent);
         }
@@ -279,8 +297,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         
         var messageType = JObject.Parse(message).SelectToken("metadata.message_type")?.ToString();
         
-        if (!string.IsNullOrEmpty(messageType) && !messageType.Equals("notification"))
-            logger.LogDebug("Received ws message type: {messageType} | SessionId: {sessionId}", messageType, SessionId);
+        // if (!string.IsNullOrEmpty(messageType) && !messageType.Equals("notification"))
+        //     logger.LogDebug("Received ws message type: {messageType} | SessionId: {sessionId}", messageType, SessionId);
         
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_keepalive"))
             return;

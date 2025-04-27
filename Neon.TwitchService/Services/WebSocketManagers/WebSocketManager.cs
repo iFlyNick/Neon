@@ -168,7 +168,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         }
 
         logger.LogDebug("Subscribing bot to chat for {broadcasterName}", string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId);
-        await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, userAccount.AccessToken, null, ct);
+        await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, userAccount.BroadcasterId, userAccount.AccessToken, null, ct);
     }
 
     public async Task Unsubscribe(string? broadcasterName, CancellationToken ct = default)
