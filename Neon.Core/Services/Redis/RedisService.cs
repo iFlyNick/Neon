@@ -31,6 +31,7 @@ public class RedisService(ILogger<RedisService> logger, IDistributedCache cache)
             return null;
         }
 
+        _logger.LogDebug("Found key {key} in cache. Value: {value}", key, value);
         return value;
     }
 

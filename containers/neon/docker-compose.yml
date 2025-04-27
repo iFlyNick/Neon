@@ -103,7 +103,7 @@ services:
     ports:
       - "5540:5540"
     volumes:
-      - redisinsight:/db
+      - redisinsight:/data
     depends_on:
       redis:
         condition: service_healthy
