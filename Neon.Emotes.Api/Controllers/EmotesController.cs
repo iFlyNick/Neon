@@ -12,6 +12,37 @@ public class EmotesController(ILogger<EmotesController> logger, IEmoteService em
     private readonly IEmoteService _emoteService = emoteService;
 
     [HttpPost]
+    [Route("v1/AllGlobalEmotes")]
+    /// <summary>
+    /// Triggers request to initiate emote cache loading for all global emotes across integrated platforms. Used typically at startup to precache global emotes
+    /// This will fetch for example all Twitch Global Emotes, 7TV, FFZ, BTTV, etc emotes and then sending them to the caching engine.
+    /// </summary>
+
+    public async Task<IActionResult> AllGlobalEmotesPostAsync(CancellationToken ct = default)
+    {
+        //want to try and fetch from all services, so list all enums
+        var emoteProviders = new List<EmoteProviderEnum>
+        {
+            EmoteProviderEnum.Twitch,
+            EmoteProviderEnum.SevenTv,
+            EmoteProviderEnum.BetterTTV,
+            EmoteProviderEnum.FrankerFaceZ
+        };
+
+        try
+        {
+            await _emoteService.PreloadGlobalEmotes(emoteProviders, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error preloading global emotes");
+            return StatusCode(500, "Internal server error");
+        }
+
+        return Ok();
+    }
+
+    [HttpPost]
     [Route("v1/AllChannelEmotes")]
     /// <summary>
     /// Triggers request to initiate emote cache loading for all emotes across integrated platforms for a given broadcaster. Used typically if the user has authorized the bot to interact with their channel.

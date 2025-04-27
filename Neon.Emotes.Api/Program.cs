@@ -2,6 +2,7 @@ using Neon.Core.Extensions;
 using Neon.Core.Models;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Http;
+using Neon.Emotes.Api.Models;
 using Neon.Emotes.Api.Services.Abstractions;
 using Neon.Emotes.Api.Services.BetterTtv;
 using Neon.Emotes.Api.Services.Emote;
@@ -13,14 +14,17 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.ConfigureRedis(builder.Configuration);
 builder.Services.ConfigureSerilog(builder.Configuration);
 builder.Services.ConfigureNeonDbContext(builder.Configuration);
 builder.Services.ConfigureTwitchServices(builder.Configuration);
 
+builder.Services.Configure<EmoteProviderSettings>(builder.Configuration.GetSection("EmoteProviderSettings"));
 builder.Services.Configure<TwitchSettings>(builder.Configuration.GetSection("TwitchSettings"));
 builder.Services.Configure<NeonSettings>(builder.Configuration.GetSection("NeonSettings"));
 
-builder.Services.AddHttpClient<IHttpService, HttpService>();
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<IHttpService, HttpService>();
 
 builder.Services.AddScoped<IEmoteService, EmoteService>();
 builder.Services.AddScoped<IIntegratedEmoteService, TwitchService>();
