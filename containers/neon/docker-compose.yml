@@ -154,6 +154,7 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=Development
       - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - AppBaseConfig__KafkaBootstrapServers=kafka:29092
       - AppBaseConfig__EmoteApi=http://emote-service:8080
     depends_on:
@@ -163,6 +164,22 @@ services:
         condition: service_healthy
       emote-service:
         condition: service_started
+    networks:
+      - neon_network
+    
+  obs-browser-source:
+    build:
+      context: ../../
+      dockerfile: ./Neon.Obs.BrowserSource.WebApp/Dockerfile
+    container_name: obs-browser-source
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - BaseKafkaConfig__BootstrapServers=kafka:29092
+    ports:
+      - "5002:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - neon_network
 

@@ -3,6 +3,7 @@ using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Redis;
 using Neon.TwitchMessageService.Models;
+using Neon.TwitchMessageService.Models.Badges;
 using Neon.TwitchMessageService.Models.Emotes;
 using Neon.TwitchMessageService.Services.Twitch.Badges;
 using Newtonsoft.Json;
@@ -46,7 +47,7 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         var messageBadges = twitchMessage.Payload.Event.Badges;
         var providerBadges = await badgeService.GetProviderBadgesFromBadges(channelId, messageBadges, ct);
         
-        var processedMessage = GetProcessedMessage(twitchMessage, allEmotes);
+        var processedMessage = GetProcessedMessage(twitchMessage, allEmotes, providerBadges);
 
         return processedMessage;
     }
@@ -105,9 +106,47 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         
         var channelEmoteCacheKey = $"channelEmotes-{channelId}";
         var channelEmoteString = await redisService.Get(channelEmoteCacheKey, ct);
-        
-        //logger.LogDebug("Redis cache stats: globalEmoteString has value -> {global} | channelEmoteString has value -> {channel}", !string.IsNullOrEmpty(globalEmoteString), !string.IsNullOrEmpty(channelEmoteString));
 
+        //fetch is in priority of what gets loaded to the list first, going to start with channel, then other channels, then global
+        if (!string.IsNullOrEmpty(channelEmoteString))
+        {
+            var channelEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(channelEmoteString);
+            if (channelEmotes is not null && channelEmotes.Count > 0)
+            {
+                retVal.AddRange(channelEmotes);
+                logger.LogDebug("Redis cache stats: channelEmotes count -> {channelEmotes}", channelEmotes.Count);
+            }
+        }
+        
+        //need to add channel emotes used from other channels to the return list, they should already be cached by this call
+        var emoteFragmentChannelIds = message.Payload.Event.TwitchMessage?.Fragments?.Where(s => s.Emote is not null).Select(s => s.Emote).Where(s => s is not null && !string.IsNullOrEmpty(s.OwnerId)).Select(s => s!.OwnerId).ToList();
+
+        var otherChannelEmoteList = new List<string>();
+        if (emoteFragmentChannelIds is not null && emoteFragmentChannelIds.Count > 0)
+        {
+            foreach (var emoteFragmentChannelId in emoteFragmentChannelIds)
+            {
+                var cacheKey = $"channelEmotes-{emoteFragmentChannelId}";
+                var otherChannelEmoteString = await redisService.Get(cacheKey, ct);
+
+                if (string.IsNullOrEmpty(otherChannelEmoteString))
+                    continue;
+
+                otherChannelEmoteList.Add(otherChannelEmoteString);
+                logger.LogDebug("Redis cache stats: otherChannelEmotes count -> {otherChannelEmotes}",
+                    otherChannelEmoteString);
+            }
+        }
+
+        foreach (var otherChannelEmote in otherChannelEmoteList)
+        {
+            var tEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(otherChannelEmote);
+            if (tEmotes is null || tEmotes.Count == 0)
+                continue;
+            
+            retVal.AddRange(tEmotes);
+        }
+        
         if (!string.IsNullOrEmpty(globalEmoteString))
         {
             var globalEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(globalEmoteString);
@@ -118,21 +157,10 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             }
         }
 
-        if (string.IsNullOrEmpty(channelEmoteString)) 
-            return retVal;
-        
-        var channelEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(channelEmoteString);
-
-        if (channelEmotes is null || channelEmotes.Count == 0)
-            return retVal;
-            
-        retVal.AddRange(channelEmotes);
-        logger.LogDebug("Redis cache stats: channelEmotes count -> {globalCount}", channelEmotes.Count);
-
         return retVal;
     }
 
-    private ProcessedMessage? GetProcessedMessage(Message? message, List<ProviderEmote>? emotes)
+    private ProcessedMessage? GetProcessedMessage(Message? message, List<ProviderEmote>? emotes, List<ProviderBadge>? providerBadges)
     {
         if (message is null || message.Payload is null || message.Payload.Event is null || message.Payload.Event.TwitchMessage is null || string.IsNullOrEmpty(message.Payload.Event.TwitchMessage.Text))
             return null;
@@ -147,7 +175,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
                 Message = message.Payload.Event.TwitchMessage.Text,
                 ChannelName = message.Payload.Event.BroadcasterUserName,
                 ChatterName = message.Payload.Event.ChatterUserName,
-                ChatterColor = message.Payload.Event.Color
+                ChatterColor = message.Payload.Event.Color,
+                ChatterBadges = providerBadges
             };
             
             return retVal;
@@ -162,7 +191,7 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             var emoteUrl = emotes.FirstOrDefault(s => s.Name == msg.Trim())?.ImageUrl;
 
             processedMessageParts.Add(!string.IsNullOrEmpty(emoteUrl)
-                ? $"<img src=\"{emoteUrl}\" alt=\"{msg.Trim()}\" />"
+                ? $"<img src=\"{emoteUrl}\" alt=\"{msg.Trim()}\" title=\"{msg.Trim()}\" />"
                 : msg.Trim());
         }
 
@@ -173,7 +202,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             Message = processedMessage,
             ChannelName = message.Payload.Event.BroadcasterUserName,
             ChatterName = message.Payload.Event.ChatterUserName,
-            ChatterColor = message.Payload.Event.Color
+            ChatterColor = message.Payload.Event.Color,
+            ChatterBadges = providerBadges
         };
 
         return retVal;

@@ -91,12 +91,8 @@ public class BadgeService(ILogger<BadgeService> logger, IRedisService redisServi
             return null;
         }
         
-        if (!string.IsNullOrEmpty(globalBadges))
-        {
-            var globalBadgeSets = JsonConvert.DeserializeObject<List<ProviderBadgeSet>>(globalBadges);
-            if (globalBadgeSets is not null && globalBadgeSets.Count > 0)
-                allBadges.AddRange(globalBadgeSets);
-        }
+        //twitch by default has sub/bit badges, meaning if global is looked up first it will probably fail to match because channel specific badges will have different id's but same set id
+        //current setup the level of badge (global vs channel) is lost, but hacking to push channel to the front of the list to 'override' the global badges. if a channel doesn't have badges, it should be null and global would apply
         
         if (!string.IsNullOrEmpty(channelBadges))
         {
@@ -105,13 +101,27 @@ public class BadgeService(ILogger<BadgeService> logger, IRedisService redisServi
                 allBadges.AddRange(channelBadgeSets);
         }
         
+        if (!string.IsNullOrEmpty(globalBadges))
+        {
+            var globalBadgeSets = JsonConvert.DeserializeObject<List<ProviderBadgeSet>>(globalBadges);
+            if (globalBadgeSets is not null && globalBadgeSets.Count > 0)
+                allBadges.AddRange(globalBadgeSets);
+        }
+        
         var retVal = new List<ProviderBadge>();
+        
+        logger.LogDebug("Attempting to match input badges to output badges. Total badges iterating: {badgeCount}", badges.Count);
         
         foreach (var badge in badges)
         {
+            logger.LogDebug("Iterating badge: {badgeId} | SetId: {setId}", badge.Id, badge.SetId);
+            
             var badgeSet = allBadges.FirstOrDefault(s => s.SetId == badge.SetId);
 
             var providerBadge = badgeSet?.ProviderBadges?.FirstOrDefault(s => s.Id == badge.Id);
+            
+            logger.LogDebug("Found badge set: {badgeSetId} | Found provider badge: {providerBadgeId}", badgeSet?.SetId, providerBadge?.Id);
+            
             if (providerBadge is null)
                 continue;
 
