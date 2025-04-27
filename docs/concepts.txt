@@ -1,0 +1,102 @@
+- limits
+    - 1 total kafka container
+    - 1 total postgres container
+    - 1 total redis container
+    - 1 total twitch container
+        - due to twitch websocket request limit per account
+
+- container definitions
+    - account mgmt web app
+        - responsible for interaction with user for basic setup for their 'environment'
+        - probably use twitch oauth for logging in as it'll tie most of it together
+            - might be an issue when wanting to add discord if users only want discord
+        - on account create, call out to api to start process for generating future use apps
+            - kafka topic generation
+            - chat app ws url
+            - etc
+
+    - api 
+        - support account mgmt web app endpoints
+        - /userchat
+            - generate kafka topic for user
+            - generates ws url for obs source
+            - allow user to define their own 'template' for chat overlay
+
+    - kafka
+        - includes kafka ui
+        - includes api for management helping around kafka topic/partition assignments
+        - core hub for interactions
+        - has topics for management
+            - account creation for db sync details
+        - has topics for subscribed users
+            - chat
+            - events
+            - etc
+
+    - kafka management api
+        - helper api to manage topics/partitions on the fly
+
+    - db sync service (optional, offloads larger db interaction from other apps)
+        - optionally syncs chat/events to db
+        - optionally syncs new account updates to db
+
+    - twitch
+        - core interaction with twitch itself
+        - on topic events it can start listening for chat/events for given users to stream back to kafka
+        - interacts with emote api to fetch emote data from chat messages
+
+    - emotes api
+        - on request/triggers it loads appropriate emotes from emote apis
+        - work with redis to hold emotes in cache for rapid access
+
+    - redis
+        - general rapid cache access
+        - could store user sessions, emotes, etc
+
+    - obs websocket api
+        - handles ws creation for active obs browser (or just normal browser) requests
+        - streams events from kafka back to the user over the ws with template applied
+
+    - postgres
+        - it's postgres
+        
+- kafka setup
+    - topics
+        - twitch-chat-events
+            - partitions created to house x channels at once for growth?
+        - subscription based startup events
+            - initiate connect/disconnect from twitch chats
+        - account
+            - general account updates
+
+- service details
+    - twitch service
+        - listens to kafka to know when to join/leave a channel chat and event subscriptions
+        - internally manages twitch ws connection in entirety
+        - syncs with emotes api to help prefetch channel emotes for rapid request returns
+            - fetch emote data from redis first to skip http request
+            - if cache miss, try http request to emotes api as fallback
+        - sends chat/events back to kafka once subscribed in format that is ready for consumers to read from for use
+            - doesn't need emote data other than the pointer to the source
+
+    - kafka mgmt api 
+        - consumes initial account requests to initialize topics/partitions needed to support future requests by channel
+
+    - db sync service
+        - generally optional, but enables long term persistence for storage
+        - consumes messages from partitions to store in db
+
+    - obs ws api
+        - waits for connect request to upgrade to ws
+        - manages sending messages back from kafka partition for requested messages (chats/events)
+        - manages formatting data in template format by channel
+            - store template details in redis?
+        
+    - emotes api
+        - waits for request from either twitch api (or maybe kafka connect/disconnect consumer??) to initiate emote src url preloading for rapid access upon request
+        - waits for emote requests from twitch service to fetch src details from redis for emotes by channel
+            - ideally loaded from redis but on cache miss repull from source emote apis?
+    
+    - account webapp api
+        - manages user account initial setup and obs ws api url returns
+        - manages user account setup/config for how they want the app to display their details

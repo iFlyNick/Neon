@@ -1,0 +1,123 @@
+Project Neon
+
+- twitch account setup
+	- bot account: TheNeonBot
+
+- auth
+	- need to get the twitch user to authorize the app with provided scopes
+		- example url:
+			- https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=hof5gwx0su6owfnys0nyan9c87zr6t&redirect_uri=http://localhost:3000&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671
+		- need to set the following:
+			- response_type = code
+			- client_id = my app client id
+			- redirect_uri = my registered redirect uri (probably localhost:3000, but defined in the app registration itself)
+			- scope = url encoded, space delimited values of scopes i want the user to grant my app access to
+			- state => optional => can be a token to ensure when the user auths and i get the code back, the state is returned too that can be used to validate the request
+	- that auth process redirects back to the uri defined and passes back the 'code' value which acts as the auth token
+	- before attempting to auth against an api or sub to an event i need to call the oauth endpoint using that code and my client details to get the access token
+		- post to https://id.twitch.tv/oauth2/token
+		- include	
+			- client_id (my app client id)
+			- client_secret (my app client secret)
+			- code (the code returned back from the user authorizing my app
+			- grant_type (set to authorization_code)
+			- redirect_uri (my apps registered redirect uri, probably localhost:3000)
+	- once access token is obtained, that is what gets passed back as the autorization bearer token to subscribe to events on the webscocket
+		- example payload returned from the /token endpoint:
+			{
+			  "access_token": "rfx2uswqe8l4g1mkagrvg5tv0ks3",
+			  "expires_in": 14124,
+			  "refresh_token": "5b93chm6hdve3mycz05zfzatkfdenfspp1h1ar2xxdalen01",
+			  "scope": [
+				"channel:moderate",
+				"chat:edit",
+				"chat:read"
+			  ],
+			  "token_type": "bearer"
+			}
+	- eventually (roughly after the 'expires_in' field, or when twitch returns a 401) the tokens need refreshed to continue
+	- to refresh
+		- post to https://id.twitch.tv/oauth2/token
+		- include
+			- client_id (my app client id)
+			- client_secret (my app client secret)
+			- grant_type (set to refresh_token)
+			- refresh_token (the one from above that probably changes after each request, so 5b93chm6hdve3mycz05zfzatkfdenfspp1h1ar2xxdalen01 in this example)
+				- this must be url encoded
+	- upon success, a new payload will be sent back like below, to which i'd need to store the updated values again:
+		{
+		  "access_token": "1ssjqsqfy6bads1ws7m03gras79zfr",
+		  "expires_in": 14124,
+		  "refresh_token": "eyJfMzUtNDU0OC4MWYwLTQ5MDY5ODY4NGNlMSJ9",
+		  "scope": [
+			"channel:moderate",
+			"chat:edit",
+			"chat:read"
+		  ],
+		  "token_type": "bearer"
+		}
+	- it's possible for the reauth to fail due to user changed password, or revocation to the app
+		- at that point, a 401 response would be returned and the user basically needs to start back from the top to initiate the process to get a new code again
+	- you must also validate the token is still active on an hourly basis and once when you start (not sure what start exactly means)
+		- to do so, send a get request to https://id.twitch.tv/oauth2/validate
+			- include the Authorization: OAuth <access token> in the headers to ensure it's still valid
+		
+- stream elements example scopes:
+	bits:read
+	chat:read
+	channel:manage:broadcast
+	channel:read:redemptions
+	channel:moderate
+	channel_subscriptions
+	channel:read:subscriptions
+	channel:manage:predictions
+	channel:manage:polls
+	channel:edit:commercial
+	channel:read:charity
+	channel:read:cheers
+	channel:read:vips
+	channel:read:hype_train
+	channel:bot
+	channel:manage:ads
+	channel:read:ads
+	moderator:read:chatters
+	moderator:read:followers
+	moderation:read
+	user:read:broadcast
+	user:read:chat
+	user:read:email
+		
+- eventsub scopes
+	- bits:read (channel.bits.use, channel.cheer)
+		- user access token
+		- channel.cheer might be duplicated?
+	- moderator:read:followers (channel.follow)
+		- probably user access token
+	- user:read:chat (channel.chat.message, channel.chat.message_delete, channel.chat.notification)
+		- user access token
+		- if using app access, need user:bot and one of channel:bot or channel moderator granted
+	- channel:read:subscriptions (channel.subscribe, channel.subscription.gift, channel.subscription.message)
+		- probably user access token
+		- might be better to use channel.chat.notifications? it seems to have more info
+		- sub message might not be included in channel.chat.notification though?
+	- channel:read:hype_train (channel.hype_train.begin, channel.hype_train.progress, channel.hype_train.end)
+		- probably user access token
+		- order or events not guaranteed
+	- stream.online
+		- no auth
+	- stream.offline
+		- no auth
+		
+- example event sub auth url for TheNeonBot to read/write from chats
+	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=user%3Abot%20user%3Awrite%3Achat%20user%3Aread%3Achat
+
+- example event sub auth url
+	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=bits%3Aread%20moderator%3Aread%3Afollowers%20channel%3Aread%3Asubscriptions%20channel%3Aread%3Ahype_train%20channel%3Abot
+		- t07i9xbw205tlr8lgo8anvpe2sfqo2
+		
+- joining as theneonbot chat seems free cost no matter how many channels i join as
+	- sending a chat message to a channel requires the user to have approved the channel as a channel:bot scope, or a mod. so can only send to channels the bot has been approved in, despite being able to read from pretty much everything
+- joining as theneonbot for stream/channel updates does incur a cost so it should be sent on the ws used for that user access token, dont join as the broadcaster, just the bot user app token itself to keep it free		
+		
+		
+		
