@@ -42,7 +42,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference(o => {
+    app.MapScalarApiReference(o => 
+    {
         o.Theme = ScalarTheme.Moon;
     });
 }
