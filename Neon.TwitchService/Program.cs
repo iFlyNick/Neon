@@ -39,7 +39,7 @@ await wsManagerService.Subscribe("iflynick");
 
 var botWsManagerService = scope.ServiceProvider.GetRequiredService<IWebSocketManager>();
 await botWsManagerService.SubscribeBotToChat("TheNeonBot", "iflynick");
-//await botWsManagerService.SubscribeBotToChat("TheNeonBot", null, "410577032");
+//await botWsManagerService.SubscribeBotToChat("TheNeonBot", null, "90075649");
 
 await Task.Delay(2000);
 await helixService.SendMessageAsBot("The bot is connected! BEEP BOOP.", "801173166", "114177217");
