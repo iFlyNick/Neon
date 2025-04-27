@@ -37,7 +37,7 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             return null;
         }
 
-        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => s.LoginName == broadcasterName, ct);
+        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => !string.IsNullOrEmpty(s.LoginName) && s.LoginName.ToLower() == broadcasterName.ToLower(), ct);
     }
     
     public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterIdAsync(string? broadcasterId, CancellationToken ct = default)
@@ -134,7 +134,7 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         }
 
         //TODO: remove hardcoded login name and make direct field for subscribed account for chat joining?
-        return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "TheNeonBot").ToListAsync(ct);
+        return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "theneonbot").ToListAsync(ct);
     }
 
     public async Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default)

@@ -131,7 +131,10 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
 
         if (appAccount is null || userAccount is null || (broadcasterAccount is null && string.IsNullOrEmpty(overrideBroadcasterId)))
+        {
+            logger.LogError("Unable to find app account or user account. AppAccount: {appAccount}, UserAccount: {userAccount}, BroadcasterAccount: {broadcasterAccount}", appAccount?.AppName, userAccount?.LoginName, broadcasterAccount?.LoginName);
             throw new Exception("ruh roh");
+        }
 
         var appTwitchAccount = new NeonTwitchBotSettings
         {
