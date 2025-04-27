@@ -1,14 +1,15 @@
 ﻿using Microsoft.Extensions.Options;
+using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Redis;
 using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Models.Emotes;
-using Neon.Core.Models.Twitch.EventSub;
+using Neon.TwitchMessageService.Services.Twitch.Badges;
 using Newtonsoft.Json;
 
 namespace Neon.TwitchMessageService.Services.Twitch;
 
-public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService, IOptions<AppBaseConfig> appBaseConfig) : ITwitchMessageService
+public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService, IOptions<AppBaseConfig> appBaseConfig, IBadgeService badgeService) : ITwitchMessageService
 {
     private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
     
@@ -33,9 +34,30 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             logger.LogError("Full message text is null or empty.");
             return null;
         }
+        
+        var channelId = twitchMessage.Payload.Event.BroadcasterUserId;
+        
+        await PreloadMessageEmotesToCache(twitchMessage, ct);
+        var allEmotes = await GetCachedEmotes(twitchMessage, ct);
+        
+        await badgeService.PreloadGlobalBadgesAsync(ct);
+        await badgeService.PreloadChannelBadgesAsync(channelId, ct);
 
+        var messageBadges = twitchMessage.Payload.Event.Badges;
+        var providerBadges = await badgeService.GetProviderBadgesFromBadges(channelId, messageBadges, ct);
+        
+        var processedMessage = GetProcessedMessage(twitchMessage, allEmotes);
+
+        return processedMessage;
+    }
+
+    private async Task PreloadMessageEmotesToCache(Message? message, CancellationToken ct = default)
+    {
+        if (message is null || message.Payload is null || message.Payload.Event is null)
+            return;
+        
         //call out to emote api to load all provider emotes for given channel id to ensure they're in the cache. this does not include the sender emotes used from a different twitch channel though
-        var broadcasterChannelId = twitchMessage.Payload.Event.BroadcasterUserId;
+        var broadcasterChannelId = message.Payload.Event.BroadcasterUserId;
         try
         {
             logger.LogDebug("Preloading emotes for channel id {channelId}", broadcasterChannelId);
@@ -46,92 +68,98 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         {
             logger.LogError("Error preloading all channel emotes for channel id {channelId}: {error}", broadcasterChannelId, ex.Message);
         }
-        
-        var channelId = twitchMessage.Payload.Event.BroadcasterUserId;
 
         //group this instead for unique ids
-        var emoteFragmentChannelIds = twitchMessage.Payload.Event.TwitchMessage.Fragments?.Where(s => s.Emote is not null).Select(s => s.Emote).Where(s => s is not null && !string.IsNullOrEmpty(s.OwnerId)).Select(s => s!.OwnerId).ToList();
+        var emoteFragmentChannelIds = message.Payload.Event.TwitchMessage?.Fragments?.Where(s => s.Emote is not null).Select(s => s.Emote).Where(s => s is not null && !string.IsNullOrEmpty(s.OwnerId)).Select(s => s!.OwnerId).ToList();
         
         logger.LogDebug("Total emote fragment channel id's found in message: {emoteFragmentChannelIds}", emoteFragmentChannelIds?.Count);
 
-        var allEmotes = new List<ProviderEmote>();
-
         //call out to emote api to preload twitch emotes for any given channelid in the fragment list. Generally used to capture emotes from other twitch channels
-        if (emoteFragmentChannelIds is not null && emoteFragmentChannelIds.Count > 0)
+        if (emoteFragmentChannelIds is null || emoteFragmentChannelIds.Count == 0)
+            return;
+        
+        foreach (var emoteChannelId in emoteFragmentChannelIds.Where(emoteChannelId => !string.IsNullOrEmpty(emoteChannelId)))
         {
-            foreach (var emoteChannelId in emoteFragmentChannelIds)
+            try
             {
-                if (string.IsNullOrEmpty(emoteChannelId))
-                    continue;
-
-                try
-                {
-                    logger.LogDebug("Preloading emotes for channel id {channelId}", emoteChannelId);
-                    var url = $"{_appBaseConfig.EmoteApi}/api/Emotes/v1/TwitchChannelEmotes?broadcasterId={emoteChannelId}";
-                    var resp = await httpService.PostAsync(url, null, null, null, null, ct);
-                    logger.LogDebug("Http request to emote api returned response code: {responseCode}", resp?.StatusCode);
-                } catch (Exception ex)
-                {
-                    logger.LogError("Error preloading emotes for channel id {channelId}: {error}", emoteChannelId, ex.Message);
-                    continue;
-                }
-                
-                var customEmoteCacheKey = $"channelEmotes-{emoteChannelId}";
-
-                var customEmoteString = await redisService.Get(customEmoteCacheKey, ct);
-
-                if (string.IsNullOrEmpty(customEmoteString)) 
-                    continue;
-                
-                var customEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(customEmoteString);
-                if (customEmotes is not null && customEmotes.Count > 0)
-                {
-                    allEmotes.AddRange(customEmotes);
-                    logger.LogDebug("Redis cache stats: customEmotes count -> {customCount}", customEmotes.Count);
-                }
+                logger.LogDebug("Preloading emotes for channel id {channelId}", emoteChannelId);
+                var url = $"{_appBaseConfig.EmoteApi}/api/Emotes/v1/TwitchChannelEmotes?broadcasterId={emoteChannelId}";
+                var resp = await httpService.PostAsync(url, null, null, null, null, ct);
+                logger.LogDebug("Http request to emote api returned response code: {responseCode}", resp?.StatusCode);
+            } catch (Exception ex)
+            {
+                logger.LogError("Error preloading emotes for channel id {channelId}: {error}", emoteChannelId, ex.Message);
             }
         }
+    }
 
+    private async Task<List<ProviderEmote>?> GetCachedEmotes(Message? message, CancellationToken ct = default)
+    {
+        if (message is null || message.Payload is null || message.Payload.Event is null)
+            return null;
+        
+        var retVal = new List<ProviderEmote>();
+        var channelId = message.Payload.Event.BroadcasterUserId;
+        
         var globalEmoteString = await redisService.Get(GlobalEmoteCacheKey, ct);
         
         var channelEmoteCacheKey = $"channelEmotes-{channelId}";
         var channelEmoteString = await redisService.Get(channelEmoteCacheKey, ct);
         
-        logger.LogDebug("Redis cache stats: globalEmoteString has value -> {global} | channelEmoteString has value -> {channel}", !string.IsNullOrEmpty(globalEmoteString), !string.IsNullOrEmpty(channelEmoteString));
+        //logger.LogDebug("Redis cache stats: globalEmoteString has value -> {global} | channelEmoteString has value -> {channel}", !string.IsNullOrEmpty(globalEmoteString), !string.IsNullOrEmpty(channelEmoteString));
 
         if (!string.IsNullOrEmpty(globalEmoteString))
         {
             var globalEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(globalEmoteString);
             if (globalEmotes is not null && globalEmotes.Count > 0)
             {
-                allEmotes.AddRange(globalEmotes);
+                retVal.AddRange(globalEmotes);
                 logger.LogDebug("Redis cache stats: globalEmotes count -> {globalCount}", globalEmotes.Count);
             }
         }
 
-        if (!string.IsNullOrEmpty(channelEmoteString))
+        if (string.IsNullOrEmpty(channelEmoteString)) 
+            return retVal;
+        
+        var channelEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(channelEmoteString);
+
+        if (channelEmotes is null || channelEmotes.Count == 0)
+            return retVal;
+            
+        retVal.AddRange(channelEmotes);
+        logger.LogDebug("Redis cache stats: channelEmotes count -> {globalCount}", channelEmotes.Count);
+
+        return retVal;
+    }
+
+    private ProcessedMessage? GetProcessedMessage(Message? message, List<ProviderEmote>? emotes)
+    {
+        if (message is null || message.Payload is null || message.Payload.Event is null || message.Payload.Event.TwitchMessage is null || string.IsNullOrEmpty(message.Payload.Event.TwitchMessage.Text))
+            return null;
+
+        ProcessedMessage retVal;
+        
+        if (emotes is null || emotes.Count == 0)
         {
-            var channelEmotes = JsonConvert.DeserializeObject<List<ProviderEmote>>(channelEmoteString);
-            if (channelEmotes is not null && channelEmotes.Count > 0)
+            logger.LogDebug("No emotes provided from cache, returning processed message without iteration.");
+            retVal = new ProcessedMessage
             {
-                allEmotes.AddRange(channelEmotes);
-                logger.LogDebug("Redis cache stats: channelEmotes count -> {globalCount}", channelEmotes.Count);
-            }
+                Message = message.Payload.Event.TwitchMessage.Text,
+                ChannelName = message.Payload.Event.BroadcasterUserName,
+                ChatterName = message.Payload.Event.ChatterUserName,
+                ChatterColor = message.Payload.Event.Color
+            };
+            
+            return retVal;
         }
         
-        var tokenizedMessage = twitchMessage.Payload.Event.TwitchMessage.Text.Split(' ');
+        var tokenizedMessage = message.Payload.Event.TwitchMessage.Text.Split(' ');
 
         var processedMessageParts = new List<string>();
 
         foreach (var msg in tokenizedMessage)
         {
-            if (allEmotes is null || allEmotes.Count == 0)
-            {
-                processedMessageParts.Add(msg.Trim());
-                continue;
-            }
-
-            var emoteUrl = allEmotes.FirstOrDefault(s => s.Name == msg.Trim())?.ImageUrl;
+            var emoteUrl = emotes.FirstOrDefault(s => s.Name == msg.Trim())?.ImageUrl;
 
             processedMessageParts.Add(!string.IsNullOrEmpty(emoteUrl)
                 ? $"<img src=\"{emoteUrl}\" alt=\"{msg.Trim()}\" />"
@@ -140,12 +168,12 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
 
         var processedMessage = string.Join(" ", processedMessageParts);
 
-        var retVal = new ProcessedMessage
+        retVal = new ProcessedMessage
         {
             Message = processedMessage,
-            ChannelName = twitchMessage.Payload.Event.BroadcasterUserName,
-            ChatterName = twitchMessage.Payload.Event.ChatterUserName,
-            ChatterColor = twitchMessage.Payload.Event.Color
+            ChannelName = message.Payload.Event.BroadcasterUserName,
+            ChatterName = message.Payload.Event.ChatterUserName,
+            ChatterColor = message.Payload.Event.Color
         };
 
         return retVal;
