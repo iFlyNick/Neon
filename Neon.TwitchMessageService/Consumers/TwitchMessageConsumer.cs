@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Neon.Core.Models.Kafka;
+using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
 using Neon.TwitchMessageService.Services.Twitch;
 using Newtonsoft.Json;
@@ -16,11 +17,26 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     private readonly string? _groupId = "twitch-channel-messages-group";
     private readonly string? _partitionKey = "0";
 
-    protected override Task ExecuteAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        InitializeChannelConsumer(ct);
+        await PreloadGlobalEmotes(ct);
 
-        return Task.CompletedTask;
+        InitializeChannelConsumer(ct);
+    }
+
+    private async Task PreloadGlobalEmotes(CancellationToken ct = default)
+    {
+        try
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var httpService = scope.ServiceProvider.GetRequiredService<IHttpService>();
+
+            await httpService.PostAsync("https://localhost:7286/api/Emotes/v1/AllGlobalEmotes", null, null, null, null, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error preloading global emotes: {error}", ex.Message);
+        }
     }
 
     private void InitializeChannelConsumer(CancellationToken ct = default)
@@ -44,23 +60,30 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
 
     private async Task OnConsumerMessageReceived(ConsumeResult<Ignore, string> result)
     {
-        var message = result.Message.Value;
-
-        if (message is null)
-            return;
-
-        using var scope = _serviceScopeFactory.CreateScope();
-
-        var msgService = scope.ServiceProvider.GetRequiredService<ITwitchMessageService>();
-
-        var processedMessage = await msgService.ProcessTwitchMessage(message);
-
-        await _kafkaService.ProduceAsync(new KafkaProducerConfig
+        try
         {
-            Topic = "twitch-channel-processed-messages",
-            TargetPartition = "0",
-            BootstrapServers = "localhost:9092"
-        }, JsonConvert.SerializeObject(processedMessage));
+            var message = result.Message.Value;
+
+            if (message is null)
+                return;
+
+            using var scope = _serviceScopeFactory.CreateScope();
+
+            var msgService = scope.ServiceProvider.GetRequiredService<ITwitchMessageService>();
+
+            var processedMessage = await msgService.ProcessTwitchMessage(message);
+
+            await _kafkaService.ProduceAsync(new KafkaProducerConfig
+            {
+                Topic = "twitch-channel-processed-messages",
+                TargetPartition = "0",
+                BootstrapServers = "localhost:9092"
+            }, JsonConvert.SerializeObject(processedMessage));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error processing message: {error}", ex.Message);
+        }
     }
 
     private async Task OnConsumerException(ConsumeException e)

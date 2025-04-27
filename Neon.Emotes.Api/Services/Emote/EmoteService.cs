@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Neon.Core.Services.Redis;
+﻿using Neon.Core.Services.Redis;
 using Neon.Emotes.Api.Models;
 using Neon.Emotes.Api.Services.Abstractions;
 using Neon.Emotes.Api.Services.BetterTtv;
@@ -20,6 +19,13 @@ public class EmoteService(ILogger<EmoteService> logger, IEnumerable<IIntegratedE
 
     public async Task PreloadGlobalEmotes(List<EmoteProviderEnum>? emoteProviders, CancellationToken ct = default)
     {
+        //cache emotes using redis using broadcaster id as the key value
+        if (await _redisService.Exists(_globalEmoteCacheKey, ct))
+        {
+            _logger.LogInformation("Redis cache key for global emotes already exists. Skipping creation.");
+            return;
+        }
+
         if (emoteProviders is null || emoteProviders.Count == 0)
         {
             _logger.LogWarning("Emote providers list is null or empty for global emote loading.");
@@ -115,12 +121,6 @@ public class EmoteService(ILogger<EmoteService> logger, IEnumerable<IIntegratedE
         }
 
         //cache emotes using redis using broadcaster id as the key value
-        if (await _redisService.Exists(_globalEmoteCacheKey, ct))
-        {
-            _logger.LogInformation("Redis cache key for global emotes already exists. Skipping creation.");
-            return;
-        }
-
         _logger.LogInformation("Attempting to create redis cache key for global emotes");
 
         await _redisService.Create(_globalEmoteCacheKey, JsonConvert.SerializeObject(emotes), TimeSpan.FromHours(1), ct);
@@ -133,6 +133,15 @@ public class EmoteService(ILogger<EmoteService> logger, IEnumerable<IIntegratedE
         if (string.IsNullOrEmpty(broadcasterId) || emoteProviders is null || emoteProviders.Count == 0)
         {
             _logger.LogWarning("Broadcaster id is null or empty, or emote providers list is null or empty.");
+            return;
+        }
+
+        var cacheKey = $"channelEmotes-{broadcasterId}";
+
+        //cache emotes using redis using broadcaster id as the key value
+        if (await _redisService.Exists(cacheKey, ct))
+        {
+            _logger.LogInformation("Redis cache key for broadcaster emotes already exists. Skipping creation.");
             return;
         }
 
@@ -224,15 +233,6 @@ public class EmoteService(ILogger<EmoteService> logger, IEnumerable<IIntegratedE
                     _logger.LogWarning("Unknown emote provider: {provider}", provider);
                     continue;
             }
-        }
-
-        var cacheKey = $"channelEmotes-{broadcasterId}";
-
-        //cache emotes using redis using broadcaster id as the key value
-        if (await _redisService.Exists(cacheKey, ct))
-        {
-            _logger.LogInformation("Redis cache key for broadcaster emotes already exists. Skipping creation.");
-            return;
         }
 
         _logger.LogInformation("Attempting to create redis cache key for broadcaster emotes");

@@ -16,7 +16,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
         ArgumentNullException.ThrowIfNull(callback, nameof(callback));
 
         //consumers aren't async by default, so spin up new thread to run consumer and raise events back out
-        var t = Task.Run(() =>
+        var t = Task.Run(async () =>
         {
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
 
@@ -35,7 +35,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
                 try
                 {
                     var result = consumer.Consume(ct);
-                    callback.Invoke(result);
+                    await callback.Invoke(result);
                 }
                 catch (ConsumeException e)
                 {
