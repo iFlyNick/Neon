@@ -258,7 +258,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         {
             var result = await Client!.ReceiveAsync(segment, ct);
 
-            if (result.MessageType == WebSocketMessageType.Close || Client.State == WebSocketState.CloseReceived)
+            if (result.MessageType == WebSocketMessageType.Close || Client.State == WebSocketState.CloseReceived || Client.State == WebSocketState.CloseSent || Client.State == WebSocketState.Closed || Client.State == WebSocketState.Aborted)
             {
                 logger.LogWarning("Websocket connection closed. Reason: {reason}", result.CloseStatusDescription);
                 await DisconnectAsync(ct);
@@ -276,8 +276,12 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     {
         if (string.IsNullOrEmpty(message))
             return;
-
+        
         var messageType = JObject.Parse(message).SelectToken("metadata.message_type")?.ToString();
+        
+        if (!string.IsNullOrEmpty(messageType) && !messageType.Equals("notification"))
+            logger.LogDebug("Received ws message type: {messageType} | SessionId: {sessionId}", messageType, SessionId);
+        
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_keepalive"))
             return;
 

@@ -41,7 +41,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
 
         await wsService.ConnectAsync(async twitchMessage =>
         {
-            logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
+            //logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
             
             await kafkaService.ProduceAsync(new KafkaProducerConfig
             {
@@ -112,7 +112,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
 
         await wsService.ConnectAsync(async twitchMessage =>
         {
-            logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
+            //logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
 
             await kafkaService.ProduceAsync(new KafkaProducerConfig
             {
