@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Neon.Core.Data.Twitch;
+using Neon.Core.Models;
 using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Kafka;
@@ -10,9 +11,10 @@ using Newtonsoft.Json;
 
 namespace Neon.TwitchService.Services.WebSocketManagers;
 
-public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKafkaConfig> baseKafkaSettings, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOAuthService oAuthService) : IWebSocketManager
+public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKafkaConfig> baseKafkaSettings, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOAuthService oAuthService, IOptions<NeonSettings> twitchAppSettings) : IWebSocketManager
 {
     private readonly BaseKafkaConfig _baseKafkaConfig = baseKafkaSettings.Value ?? throw new ArgumentNullException(nameof(baseKafkaSettings));
+    private readonly NeonSettings _twitchAppSettings = twitchAppSettings.Value ?? throw new ArgumentNullException(nameof(twitchAppSettings));
     
     //TODO: maybe dont put the kafka/oauth service in the constructor long term
 
@@ -55,30 +57,29 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         //TODO: dont do this here :)
         var twitchDbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
         var broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
-        var botAccount = await twitchDbService.GetBotAccountAsync("TheNeonBot", ct);
+        var appAccount = await twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
 
-        if (broadcasterAccount is null || botAccount is null)
+        if (broadcasterAccount is null || appAccount is null)
             throw new Exception("ruh roh");
 
         var appTwitchAccount = new NeonTwitchBotSettings
         {
-            Username = botAccount.BotName,
-            ClientId = botAccount.ClientId,
-            ClientSecret = botAccount.ClientSecret,
-            AccessToken = botAccount.AccessToken,
-            RedirectUri = botAccount.RedirectUri,
-            BroadcasterId = botAccount.TwitchBroadcasterId
+            Username = appAccount.AppName,
+            ClientId = appAccount.ClientId,
+            ClientSecret = appAccount.ClientSecret,
+            AccessToken = appAccount.AccessToken,
+            RedirectUri = appAccount.RedirectUri
         };
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
 
         var oAuthValidation = await oAuthService.ValidateOAuthToken(broadcasterAccount.AccessToken, ct);
 
-        //user auth failed, need to reauth
+        //user auth failed, need to re-auth
         if (oAuthValidation is null)
         {
             logger.LogDebug("Access token needs refreshed or is invalid for account: {broadcasterName}", broadcasterName);
-            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(botAccount.ClientId, botAccount.ClientSecret, broadcasterAccount.RefreshToken);
+            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, broadcasterAccount.RefreshToken, ct);
 
             if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
             {
@@ -96,19 +97,19 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         await wsService.SubscribeChannelAsync(broadcasterAccount.BroadcasterId, broadcasterAccount.AccessToken, null, ct);
     }
 
-    public async Task SubscribeBotToChat(string? botName, string? broadcasterName, string? overrideBroadcasterId = null, CancellationToken ct = default)
+    public async Task SubscribeUserToChat(string? userName, string? broadcasterName, string? overrideBroadcasterId = null, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(botName) || (string.IsNullOrEmpty(broadcasterName) && string.IsNullOrEmpty(overrideBroadcasterId)))
+        if (string.IsNullOrEmpty(userName) || (string.IsNullOrEmpty(broadcasterName) && string.IsNullOrEmpty(overrideBroadcasterId)))
             return;
 
-        logger.LogDebug("Subscribing to chat: {broadcasterName}", broadcasterName);
+        logger.LogDebug("Subscribing to chat {broadcasterName} using username of {userName}", broadcasterName, userName);
 
         using var scope = serviceScopeFactory.CreateScope();
 
         var wsService = scope.ServiceProvider.GetRequiredService<IWebSocketService>();
 
-        if (!_webSocketServices.TryGetValue(botName, out var existingWsService))
-            _webSocketServices.Add(botName, wsService);
+        if (!_webSocketServices.TryGetValue(userName, out var existingWsService))
+            _webSocketServices.Add(userName, wsService);
 
         await wsService.ConnectAsync(async twitchMessage =>
         {
@@ -126,46 +127,45 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         //TODO: dont do this here :)
         var twitchDbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
         var broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
-        var appAccount = await twitchDbService.GetBotAccountAsync(botName, ct);
-        var botAccount = await twitchDbService.GetNeonBotTwitchAccountAsync(ct);
+        var appAccount = await twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
+        var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
 
-        if (appAccount is null || botAccount is null || (broadcasterAccount is null && string.IsNullOrEmpty(overrideBroadcasterId)))
+        if (appAccount is null || userAccount is null || (broadcasterAccount is null && string.IsNullOrEmpty(overrideBroadcasterId)))
             throw new Exception("ruh roh");
 
         var appTwitchAccount = new NeonTwitchBotSettings
         {
-            Username = appAccount.BotName,
+            Username = appAccount.AppName,
             ClientId = appAccount.ClientId,
             ClientSecret = appAccount.ClientSecret,
             AccessToken = appAccount.AccessToken,
-            RedirectUri = appAccount.RedirectUri,
-            BroadcasterId = appAccount.TwitchBroadcasterId
+            RedirectUri = appAccount.RedirectUri
         };
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
 
-        var oAuthValidation = await oAuthService.ValidateOAuthToken(botAccount.AccessToken, ct);
+        var oAuthValidation = await oAuthService.ValidateOAuthToken(userAccount.AccessToken, ct);
 
-        //bot auth failed, need to reauth
+        //app auth failed, need to re-auth
         if (oAuthValidation is null)
         {
-            logger.LogDebug("Access token needs refreshed or is invalid for account: {botName}", botAccount.BroadcasterId);
-            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, botAccount.RefreshToken);
+            logger.LogDebug("Access token needs refreshed or is invalid for account: {loginName}", userAccount.LoginName);
+            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, userAccount.RefreshToken, ct);
 
             if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
             {
-                logger.LogError("Failed to refresh access token for account: {botName}", botName);
+                logger.LogError("Failed to refresh access token for account: {loginName}", userAccount.LoginName);
                 return;
             }
 
-            botAccount.AccessToken = oAuthResp.AccessToken;
+            userAccount.AccessToken = oAuthResp.AccessToken;
 
             //update db with new access token
-            _ = await twitchDbService.UpdateTwitchAccountAuthAsync(botAccount.BroadcasterId, botAccount.AccessToken, ct);
+            _ = await twitchDbService.UpdateTwitchAccountAuthAsync(userAccount.BroadcasterId, userAccount.AccessToken, ct);
         }
 
-        logger.LogDebug("Subscribing bot to chat for {broadcasterName}", broadcasterName);
-        await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, botAccount.AccessToken, null, ct);
+        logger.LogDebug("Subscribing bot to chat for {broadcasterName}", string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId);
+        await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, userAccount.AccessToken, null, ct);
     }
 
     public async Task Unsubscribe(string? broadcasterName, CancellationToken ct = default)

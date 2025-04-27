@@ -2,5 +2,5 @@
 
 public class NeonSettings
 {
-    public string? BotName { get; set; }
+    public string? AppName { get; set; }
 }

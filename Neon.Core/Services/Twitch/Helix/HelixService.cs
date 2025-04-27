@@ -1,22 +1,22 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Globalization;
+using System.Net.Http.Headers;
+using System.Net.Mime;
+using System.Text;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Models.Twitch.Helix;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Twitch.Authentication;
 using Newtonsoft.Json;
-using System.Globalization;
-using System.Net.Http.Headers;
-using System.Net.Mime;
-using System.Text;
 
 namespace Neon.Core.Services.Twitch.Helix;
 
-public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings> twitchSettings, IHttpService httpService, IBotTokenService botTokenService) : IHelixService
+public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings> twitchSettings, IHttpService httpService, IAppTokenService appTokenService) : IHelixService
 {
     private readonly ILogger<HelixService> _logger = logger;
     private readonly IHttpService _httpService = httpService;
-    private readonly IBotTokenService _botTokenService = botTokenService;
+    private readonly IAppTokenService _appTokenService = appTokenService;
     private readonly TwitchSettings _twitchSettings = twitchSettings.Value;
 
     public async Task<TwitchUserAccount?> GetUserAccountDetailsAsync(string? broadcasterId, string? appAccessToken, CancellationToken ct = default)
@@ -27,11 +27,11 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
             return null;
         }
 
-        var botClientId = await _botTokenService.GetBotClientIdAsync(ct);
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
 
-        if (string.IsNullOrEmpty(botClientId))
+        if (string.IsNullOrEmpty(appClientId))
         {
-            _logger.LogError("Failed to fetch bot client id from database!");
+            _logger.LogError("Failed to fetch app client id from database!");
             return null;
         }
 
@@ -41,7 +41,7 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
         var authHeader = new AuthenticationHeaderValue("Bearer", appAccessToken);
         var headers = new Dictionary<string, string>
         {
-            { "Client-Id", botClientId }
+            { "Client-Id", appClientId }
         };
 
         var response = await _httpService.GetAsync(userAccountUrl, authHeader, headers, ct);
@@ -52,7 +52,7 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
             return null;
         }
 
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync(ct);
 
         var helixResponse = JsonConvert.DeserializeObject<HelixResponse>(responseContent);
 
@@ -85,22 +85,23 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
         return twitchUserAccount;
     }
 
-    public async Task SendMessageAsBot(string? message, string? chatBotId, string? broadcasterId, CancellationToken ct = default)
+    public async Task SendMessageAsUser(string? message, string? userId, string? broadcasterId, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(chatBotId) || string.IsNullOrEmpty(broadcasterId))
+        if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(broadcasterId))
             return;
 
         //need to use app access token as the chat bot has user:bot, and the user that authed the app to join their chat has granted channel:bot
-        var botClientId = await _botTokenService.GetBotClientIdAsync(ct);
-        var appAccessToken = await _botTokenService.GetBotAccountAuthAsync(ct);
+        //technically, userId can be anyone who granted user:chat:write but in reality this should only ever be the twitch account for TheNeonBot (NOT the app account, don't confuse them)
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
+        var appAccessResponse = await _appTokenService.GetAppAccountAuthAsync(ct);
 
-        if (string.IsNullOrEmpty(botClientId))
+        if (string.IsNullOrEmpty(appClientId))
         {
-            _logger.LogError("Failed to fetch bot client id from database!");
+            _logger.LogError("Failed to fetch app client id from database!");
             return;
         }
 
-        if (appAccessToken is null || string.IsNullOrEmpty(appAccessToken.AccessToken))
+        if (appAccessResponse is null || string.IsNullOrEmpty(appAccessResponse.AccessToken))
         {
             _logger.LogError("Failed to fetch app access token from database!");
             return;
@@ -109,17 +110,17 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
         var helixUrl = _twitchSettings.HelixApiUrl;
         var userAccountUrl = $"{helixUrl}/chat/messages";
 
-        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessToken.AccessToken);
+        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessResponse.AccessToken);
 
         var headers = new Dictionary<string, string>
         {
-            { "Client-Id", botClientId }
+            { "Client-Id", appClientId }
         };
 
         var body = new Dictionary<string, string>
         {
             { "broadcaster_id", broadcasterId },
-            { "sender_id", chatBotId },
+            { "sender_id", userId },
             { "message", message }
         };
 
@@ -131,24 +132,24 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
 
         if (response is null || !response.IsSuccessStatusCode)
         {
-            _logger.LogError("Failed to send message as bot. Status code: {StatusCode}", response?.StatusCode);
-            return;
+            _logger.LogError("Failed to send message as userId. Status code: {StatusCode} | UserId: {userId}", response?.StatusCode, userId);
+            return; //leaving return here incase something is done after this eventually
         }
     }
 
     public async Task<string?> GetGlobalEmotes(CancellationToken ct = default)
     {
         //need to use app access token to call out to global emote api
-        var botClientId = await _botTokenService.GetBotClientIdAsync(ct);
-        var appAccessToken = await _botTokenService.GetBotAccountAuthAsync(ct);
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
+        var appAccessResponse = await _appTokenService.GetAppAccountAuthAsync(ct);
 
-        if (string.IsNullOrEmpty(botClientId))
+        if (string.IsNullOrEmpty(appClientId))
         {
-            _logger.LogError("Failed to fetch bot client id from database!");
+            _logger.LogError("Failed to fetch app client id from database!");
             return null;
         }
 
-        if (appAccessToken is null || string.IsNullOrEmpty(appAccessToken.AccessToken))
+        if (appAccessResponse is null || string.IsNullOrEmpty(appAccessResponse.AccessToken))
         {
             _logger.LogError("Failed to fetch app access token from database!");
             return null;
@@ -157,11 +158,11 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
         var helixUrl = _twitchSettings.HelixApiUrl;
         var globalEmotesUrl = $"{helixUrl}/chat/emotes/global";
 
-        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessToken.AccessToken);
+        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessResponse.AccessToken);
 
         var headers = new Dictionary<string, string>
         {
-            { "Client-Id", botClientId }
+            { "Client-Id", appClientId }
         };
 
         try
@@ -186,16 +187,16 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
     public async Task<string?> GetChannelEmotes(string? broadcasterId, CancellationToken ct = default)
     {
         //need to use app access token to call out to global emote api
-        var botClientId = await _botTokenService.GetBotClientIdAsync(ct);
-        var appAccessToken = await _botTokenService.GetBotAccountAuthAsync(ct);
+        var appClientId = await _appTokenService.GetAppClientIdAsync(ct);
+        var appAccessResponse = await _appTokenService.GetAppAccountAuthAsync(ct);
 
-        if (string.IsNullOrEmpty(botClientId))
+        if (string.IsNullOrEmpty(appClientId))
         {
-            _logger.LogError("Failed to fetch bot client id from database!");
+            _logger.LogError("Failed to fetch app client id from database!");
             return null;
         }
 
-        if (appAccessToken is null || string.IsNullOrEmpty(appAccessToken.AccessToken))
+        if (appAccessResponse is null || string.IsNullOrEmpty(appAccessResponse.AccessToken))
         {
             _logger.LogError("Failed to fetch app access token from database!");
             return null;
@@ -204,11 +205,11 @@ public class HelixService(ILogger<HelixService> logger, IOptions<TwitchSettings>
         var helixUrl = _twitchSettings.HelixApiUrl;
         var channelEmotesUrl = $"{helixUrl}/chat/emotes?broadcaster_id={broadcasterId}";
 
-        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessToken.AccessToken);
+        var authHeader = new AuthenticationHeaderValue("Bearer", appAccessResponse.AccessToken);
 
         var headers = new Dictionary<string, string>
         {
-            { "Client-Id", botClientId }
+            { "Client-Id", appClientId }
         };
 
         try

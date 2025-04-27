@@ -12,7 +12,7 @@ public static class TwitchExtensions
     {
         services.AddScoped<ITwitchDbService, TwitchDbService>();
         services.AddScoped<IHelixService, HelixService>();
-        services.AddScoped<IBotTokenService, BotTokenService>();
+        services.AddScoped<IAppTokenService, AppTokenService>();
         services.AddScoped<IUserTokenService, UserTokenService>();
         services.AddSingleton<IOAuthService, OAuthService>();
 

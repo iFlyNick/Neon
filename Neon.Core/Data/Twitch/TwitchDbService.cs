@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Neon.Persistence.EntityModels.Twitch;
 using Neon.Persistence.NeonContext;
-using System.Net.Http.Headers;
 
 namespace Neon.Core.Data.Twitch;
 
@@ -11,52 +10,69 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
     private readonly ILogger<TwitchDbService> _logger = logger;
     private readonly NeonDbContext _context = context;
 
-    public async Task<TwitchAccount?> GetNeonBotTwitchAccountAsync(CancellationToken ct = default)
+    public async Task<AppAccount?> GetAppAccountAsync(string? appName, CancellationToken ct = default)
     {
+        if (string.IsNullOrEmpty(appName))
+        {
+            _logger.LogDebug("Invalid bot name request. BotName: {botName}", appName);
+            return null;
+        }
+
+        if (_context.AppAccount is null)
+        {
+            _logger.LogError("AppAccount context is null!");
+            return null;
+        }
+
+        var resp = await _context.AppAccount.AsNoTracking().FirstOrDefaultAsync(s => s.AppName == appName, ct);
+
+        return resp;
+    }
+
+    public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterName(string? broadcasterName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterName))
+        {
+            _logger.LogDebug("Invalid broadcaster name request. BroadcasterName: {broadcasterName}", broadcasterName);
+            return null;
+        }
+
+        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => s.LoginName == broadcasterName, ct);
+    }
+    
+    public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterIdAsync(string? broadcasterId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterId))
+        {
+            _logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
+            return null;
+        }
+
         if (_context.TwitchAccount is null)
         {
             _logger.LogError("TwitchAccount context is null!");
             return null;
         }
 
-        return await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == "801173166", ct);
+        return await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
     }
-
-    public async Task<BotAccount?> GetBotAccountAsync(string? botName, CancellationToken ct = default)
-    {
-        if (string.IsNullOrEmpty(botName))
-        {
-            _logger.LogDebug("Invalid bot name request. BotName: {botName}", botName);
-            return null;
-        }
-
-        if (_context.BotAccount is null)
-        {
-            _logger.LogError("BotAccount context is null!");
-            return null;
-        }
-
-        var resp = await _context.BotAccount.AsNoTracking().FirstOrDefaultAsync(s => s.BotName == botName, ct);
-
-        return resp;
-    }
-
-    public async Task<int> UpdateBotAccountSettingsAsync(BotAccount? account, CancellationToken ct = default)
+    
+    public async Task<int> UpdateAppAccountSettingsAsync(AppAccount? account, CancellationToken ct = default)
     {
         if (account is null)
             return 0;
 
-        if (_context.BotAccount is null)
+        if (_context.AppAccount is null)
         {
-            _logger.LogError("BotAccount context is null!");
+            _logger.LogError("AppAccount context is null!");
             return 0;
         }
 
-        var dbAccount = await _context.BotAccount.FirstOrDefaultAsync(s => s.BotName == account.BotName, ct);
+        var dbAccount = await _context.AppAccount.FirstOrDefaultAsync(s => s.AppName == account.AppName, ct);
 
         if (dbAccount is null)
         {
-            _logger.LogWarning("Bot account not found. BotName: {botName}", account.BotName);
+            _logger.LogWarning("App account not found. AppName: {AppName}", account.AppName);
             return 0;
         }
 
@@ -72,7 +88,7 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
 
         if (_context.TwitchAccount is null)
         {
-            _logger.LogError("BotAccount context is null!");
+            _logger.LogError("TwitchAccount context is null!");
             return 0;
         }
 
@@ -117,35 +133,8 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             return null;
         }
 
-        return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.BroadcasterId != "801173166").ToListAsync(ct);
-    }
-
-    public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterName(string? broadcasterName, CancellationToken ct = default)
-    {
-        if (string.IsNullOrEmpty(broadcasterName))
-        {
-            _logger.LogDebug("Invalid broadcaster name request. BroadcasterName: {broadcasterName}", broadcasterName);
-            return null;
-        }
-
-        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => s.LoginName == broadcasterName, ct);
-    }
-
-    private async Task<TwitchAccount?> GetTwitchAccountAsync(string? broadcasterId, CancellationToken ct = default)
-    {
-        if (string.IsNullOrEmpty(broadcasterId))
-        {
-            _logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
-            return null;
-        }
-
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
-            return null;
-        }
-
-        return await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        //TODO: remove hardcoded login name and make direct field for subscribed account for chat joining?
+        return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "TheNeonBot").ToListAsync(ct);
     }
 
     public async Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default)
@@ -155,8 +144,14 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             _logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
             return 0;
         }
+        
+        if (_context.TwitchAccount is null)
+        {
+            _logger.LogError("TwitchAccount context is null!");
+            return 0;
+        }
 
-        var account = await GetTwitchAccountAsync(broadcasterId, ct);
+        var account = await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
 
         if (account is null)
         {

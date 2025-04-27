@@ -6,12 +6,12 @@ using Neon.Core.Models.Twitch;
 
 namespace Neon.Core.Services.Twitch.Authentication;
 
-public class UserTokenService(ILogger<UserTokenService> logger, IOAuthService oAuthService, ITwitchDbService twitchDbService, IOptions<NeonSettings> botSettings) : IUserTokenService
+public class UserTokenService(ILogger<UserTokenService> logger, IOAuthService oAuthService, ITwitchDbService twitchDbService, IOptions<NeonSettings> twitchAppSettings) : IUserTokenService
 {
     private readonly ILogger<UserTokenService> _logger = logger;
     private readonly IOAuthService _oAuthService = oAuthService;
     private readonly ITwitchDbService _twitchDbService = twitchDbService;
-    private readonly NeonSettings _botSettings = botSettings.Value;
+    private readonly NeonSettings _twitchAppSettings = twitchAppSettings.Value;
 
     public async Task<OAuthValidationResponse?> ValidateOAuthToken(string? authToken, CancellationToken ct = default)
     {
@@ -26,7 +26,7 @@ public class UserTokenService(ILogger<UserTokenService> logger, IOAuthService oA
         return validationResponse;
     }
 
-    public async Task<OAuthResponse?> GetUserAccountAuthAsync(string? userCode, string? botAccessToken, CancellationToken ct = default)
+    public async Task<OAuthResponse?> GetUserAccountAuthAsync(string? userCode, string? appAccessToken, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(userCode))
         {
@@ -34,27 +34,27 @@ public class UserTokenService(ILogger<UserTokenService> logger, IOAuthService oA
             return null;
         }
 
-        if (string.IsNullOrEmpty(botAccessToken))
+        if (string.IsNullOrEmpty(appAccessToken))
         {
-            _logger.LogInformation("Missing bot access token for Auth.");
+            _logger.LogInformation("Missing app access token for Auth.");
             return null;
         }
 
-        if (string.IsNullOrEmpty(_botSettings.BotName))
+        if (string.IsNullOrEmpty(_twitchAppSettings.AppName))
         {
-            _logger.LogInformation("Missing bot name for Auth.");
+            _logger.LogInformation("Missing app name for Auth.");
             return null;
         }
 
-        var botAccount = await _twitchDbService.GetBotAccountAsync(_botSettings.BotName, ct);
+        var appAccount = await _twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
 
-        if (botAccount is null)
+        if (appAccount is null)
         {
-            _logger.LogInformation("Bot account not found. BotName: {botName}", _botSettings.BotName);
+            _logger.LogInformation("App account not found. AppName: {appName}", _twitchAppSettings.AppName);
             return null;
         }
 
-        var userAuth = await _oAuthService.GetUserAuthToken(botAccount.ClientId, botAccount.ClientSecret, userCode, botAccount.RedirectUri);
+        var userAuth = await _oAuthService.GetUserAuthToken(appAccount.ClientId, appAccount.ClientSecret, userCode, appAccount.RedirectUri, ct);
 
         return userAuth;
     }

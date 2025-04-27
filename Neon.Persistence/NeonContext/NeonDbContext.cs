@@ -7,10 +7,10 @@ namespace Neon.Persistence.NeonContext;
 
 public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(options)
 {
-    private const string defaultDbUser = "NeonApiService";
+    private const string DefaultDbUser = "NeonApiService";
 
     public DbSet<TwitchAccount>? TwitchAccount { get; set; }
-    public DbSet<BotAccount>? BotAccount { get; set; }
+    public DbSet<AppAccount>? AppAccount { get; set; }
 
     //abstracts the fluentapi calls to the configuration classes to keep this class relatively clean
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
@@ -25,15 +25,11 @@ public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(
             {
                 case EntityState.Added:
                     entry.Entity.CreatedDate = DateTime.UtcNow;
-                    entry.Entity.CreatedBy = defaultDbUser;
+                    entry.Entity.CreatedBy = DefaultDbUser;
                     break;
-                case EntityState.Modified:
+                case EntityState.Modified or EntityState.Deleted:
                     entry.Entity.ModifiedDate = DateTime.UtcNow;
-                    entry.Entity.ModifiedBy = defaultDbUser;
-                    break;
-                case EntityState.Deleted:
-                    entry.Entity.ModifiedDate = DateTime.UtcNow;
-                    entry.Entity.ModifiedBy = defaultDbUser;
+                    entry.Entity.ModifiedBy = DefaultDbUser;
                     break;
             }
         }

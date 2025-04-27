@@ -5,10 +5,10 @@ using Neon.Core.Services.Twitch.Helix;
 
 namespace Neon.Account.Api.Services.Twitch;
 
-public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger, IBotTokenService botTokenService, IUserTokenService userTokenService, ITwitchAccountService twitchAccountService, IHelixService helixService) : ITwitchAuthResponseService
+public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger, IAppTokenService appTokenService, IUserTokenService userTokenService, ITwitchAccountService twitchAccountService, IHelixService helixService) : ITwitchAuthResponseService
 {
     private readonly ILogger<TwitchAuthResponseService> _logger = logger;
-    private readonly IBotTokenService _botTokenService = botTokenService;
+    private readonly IAppTokenService _appTokenService = appTokenService;
     private readonly IUserTokenService _userTokenService = userTokenService;
     private readonly ITwitchAccountService _twitchAccountService = twitchAccountService;
     private readonly IHelixService _helixService = helixService;
@@ -29,16 +29,16 @@ public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger
 
     private async Task HandleAuthSuccessRequest(AuthenticationResponse response, CancellationToken ct = default)
     {
-        //at this point we have a code, but dont have any details about who it was. take the token and call the validate method against the oauth service to get a bit larger picture next
-        var botAuth = await _botTokenService.GetBotAccountAuthAsync(ct);
+        //at this point we have a code, but don't have any details about who it was. take the token and call the validate method against the oauth service to get a bit larger picture next
+        var appAuth = await _appTokenService.GetAppAccountAuthAsync(ct);
 
-        if (botAuth is null || string.IsNullOrEmpty(botAuth.AccessToken))
+        if (appAuth is null || string.IsNullOrEmpty(appAuth.AccessToken))
         {
-            _logger.LogCritical("Failed to fetch bot account from database or failed to get access token!");
+            _logger.LogCritical("Failed to fetch app account from database or failed to get access token!");
             return;
         }
 
-        var userAuth = await _userTokenService.GetUserAccountAuthAsync(response.Code, botAuth.AccessToken, ct);
+        var userAuth = await _userTokenService.GetUserAccountAuthAsync(response.Code, appAuth.AccessToken, ct);
 
         if (userAuth is null || string.IsNullOrEmpty(userAuth.AccessToken))
         {
