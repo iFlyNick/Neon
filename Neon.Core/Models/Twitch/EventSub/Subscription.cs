@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using Neon.Core.Models.Twitch.EventSub;
+using Newtonsoft.Json;
 
-namespace Neon.TwitchService.Models.Twitch;
+namespace Neon.Core.Models.Twitch.EventSub;
 
 public class Subscription
 {

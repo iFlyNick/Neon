@@ -1,4 +1,4 @@
-﻿namespace Neon.TwitchService.Models.Twitch;
+﻿namespace Neon.Core.Models.Twitch.EventSub;
 
 public class Message
 {

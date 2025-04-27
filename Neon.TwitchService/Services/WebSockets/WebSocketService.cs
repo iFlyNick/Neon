@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Http;
 using Neon.TwitchService.Models;
-using Neon.TwitchService.Models.Twitch;
+using Neon.Core.Models.Twitch.EventSub;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

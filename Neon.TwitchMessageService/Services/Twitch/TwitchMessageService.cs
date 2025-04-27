@@ -3,7 +3,7 @@ using Neon.Core.Services.Http;
 using Neon.Core.Services.Redis;
 using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Models.Emotes;
-using Neon.TwitchService.Models.Twitch;
+using Neon.Core.Models.Twitch.EventSub;
 using Newtonsoft.Json;
 
 namespace Neon.TwitchMessageService.Services.Twitch;

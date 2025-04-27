@@ -1,6 +1,6 @@
 ﻿using Neon.Core.Models.Twitch;
 using Neon.TwitchService.Models;
-using Neon.TwitchService.Models.Twitch;
+using Neon.Core.Models.Twitch.EventSub;
 
 namespace Neon.TwitchService.Services.WebSockets;
 
