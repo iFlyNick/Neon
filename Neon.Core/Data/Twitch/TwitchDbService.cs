@@ -120,6 +120,17 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.BroadcasterId != "801173166").ToListAsync(ct);
     }
 
+    public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterName(string? broadcasterName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterName))
+        {
+            _logger.LogDebug("Invalid broadcaster name request. BroadcasterName: {broadcasterName}", broadcasterName);
+            return null;
+        }
+
+        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => s.LoginName == broadcasterName, ct);
+    }
+
     private async Task<TwitchAccount?> GetTwitchAccountAsync(string? broadcasterId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId))

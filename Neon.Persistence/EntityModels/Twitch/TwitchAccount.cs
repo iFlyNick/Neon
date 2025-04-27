@@ -30,7 +30,7 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
     public void Configure(EntityTypeBuilder<TwitchAccount> builder)
     {
         //schema
-        builder.ToTable("TwitchAccount", "Twitch");
+        builder.ToTable("twitch_account", "twitch");
         
         //pk
         builder.HasKey(s => s.TwitchAccountId);

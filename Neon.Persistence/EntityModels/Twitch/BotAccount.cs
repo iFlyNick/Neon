@@ -19,7 +19,7 @@ public class BotAccountConfiguration : IEntityTypeConfiguration<BotAccount>
     public void Configure(EntityTypeBuilder<BotAccount> builder)
     {
         //schema
-        builder.ToTable("BotAccount", "Twitch");
+        builder.ToTable("bot_account", "twitch");
         
         //pk
         builder.HasKey(s => s.BotAccountId);

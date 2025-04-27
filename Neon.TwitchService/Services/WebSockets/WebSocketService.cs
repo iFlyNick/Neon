@@ -1,14 +1,14 @@
-﻿using Microsoft.Extensions.Options;
-using Neon.Core.Models.Twitch;
-using Neon.Core.Services.Http;
-using Neon.Core.Services.Kafka;
-using Neon.TwitchService.Models;
-using Neon.TwitchService.Models.Twitch;
-using Newtonsoft.Json;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Net.WebSockets;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Neon.Core.Models.Twitch;
+using Neon.Core.Services.Http;
+using Neon.TwitchService.Models;
+using Neon.TwitchService.Models.Twitch;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Neon.TwitchService.Services.WebSockets;
 
@@ -17,6 +17,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     private readonly ILogger<WebSocketService> _logger = logger;
     private readonly TwitchSettings _twitchSettings = twitchSettings.Value ?? throw new ArgumentNullException(nameof(_twitchSettings));
     private readonly IHttpService _httpService = httpService;
+
+    private readonly List<string> _skippableMessages = [ "session_welcome" ];
 
     private NeonTwitchBotSettings? _botSettings;
 
@@ -121,9 +123,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         {
             { ("channel.chat.message", "1") },
             { ("channel.chat.notification", "1") },
-            //{ ("channel.update", "2") },
-            //{ ("stream.online", "1") },
-            //{ ("stream.offline", "1") },
+            { ("channel.chat.clear", "1") },
         };
 
         foreach (var subscription in subscriptions)
@@ -156,7 +156,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             var resp = await _httpService.PostAsync(_twitchSettings.EventSubscriptionUrl, content, MediaTypeNames.Application.Json, authHeader, headers, ct);
 
-            var respContent = await resp?.Content?.ReadAsStringAsync();
+            var respContent = await resp?.Content?.ReadAsStringAsync(ct);
 
             _logger.LogInformation("Response from subscription: {response}", respContent);
         }
@@ -187,11 +187,15 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         var subscriptions = new List<(string, string)>
         {
-            //{ "channel.subscribe", "channel.subscription.gift", "channel.subscription.message" };
             { ("channel.subscribe", "1") },
             { ("channel.subscription.gift", "1") },
             { ("channel.subscription.message", "1") },
-            { ("channel.bits.use", "beta") },
+            { ("channel.channel_points_custom_reward_redemption.add", "1") },
+            { ("channel.channel_points_custom_reward_redemption.update", "1") },
+            { ("channel.ad_break.begin", "1") },
+            { ("channel.ban", "1") },
+            { ("channel.unban", "1") },
+            { ("channel.bits.use", "1") },
             { ("channel.hype_train.begin", "1") },
             { ("channel.hype_train.progress", "1") },
             { ("channel.hype_train.end", "1") },
@@ -275,26 +279,30 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         if (string.IsNullOrEmpty(message))
             return;
 
-        if (message.Contains("session_keepalive"))
+        var messageType = JObject.Parse(message).SelectToken("metadata.message_type")?.ToString();
+        if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_keepalive"))
             return;
 
         //_logger.LogDebug("Received message from twitch: {message}", message);
         Message? twitchMessage = null;
         try
         {
-            twitchMessage = JsonConvert.DeserializeObject<Message>(message);
+            twitchMessage = JsonConvert.DeserializeObject<Message>(message, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deserializing message from twitch: {message}", message);
         }
 
-        _logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
+        //_logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
 
         //need to intercept session id from welcome message
         var wsSessionId = twitchMessage?.Payload?.Session?.Id;
         if (!string.IsNullOrEmpty(wsSessionId) && !wsSessionId.Equals(SessionId))
             SessionId = wsSessionId;
+
+        if (!string.IsNullOrEmpty(messageType) && _skippableMessages.Contains(messageType))
+            return;
 
         //clientwebsocket should handle the ping/pong messages
         await callback.Invoke(twitchMessage);

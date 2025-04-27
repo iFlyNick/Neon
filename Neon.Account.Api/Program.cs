@@ -3,6 +3,7 @@ using Neon.Core.Extensions;
 using Neon.Core.Models;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Http;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();

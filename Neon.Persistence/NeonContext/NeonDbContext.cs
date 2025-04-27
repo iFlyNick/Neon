@@ -7,7 +7,7 @@ namespace Neon.Persistence.NeonContext;
 
 public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(options)
 {
-    private const string defaultDbUser = "NeonApp";
+    private const string defaultDbUser = "NeonApiService";
 
     public DbSet<TwitchAccount>? TwitchAccount { get; set; }
     public DbSet<BotAccount>? BotAccount { get; set; }
@@ -46,7 +46,8 @@ public class NeonDbContextDesignTimeFactory : IDesignTimeDbContextFactory<NeonDb
     public NeonDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<NeonDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;User Id=postgres;Password=postgres;Database=Neon");
+        //TODO: solve this later so you can import from config or something?
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;User Id=postgres;Password=postgres;Database=Neon").UseSnakeCaseNamingConvention();
 
         return new NeonDbContext(optionsBuilder.Options);
     }
