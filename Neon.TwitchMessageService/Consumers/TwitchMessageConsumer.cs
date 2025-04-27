@@ -1,18 +1,18 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Options;
 using Neon.Core.Models.Kafka;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
+using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Services.Twitch;
 using Newtonsoft.Json;
 
 namespace Neon.TwitchMessageService.Consumers;
 
-public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService) : BackgroundService
+public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOptions<AppBaseConfig> appBaseConfig) : BackgroundService
 {
-    private readonly ILogger<TwitchMessageConsumer> _logger = logger;
-    private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory;
-    private readonly IKafkaService _kafkaService = kafkaService;
-
+    private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
+    
     private readonly string? _topic = "twitch-channel-chats";
     private readonly string? _groupId = "twitch-channel-messages-group";
     private readonly string? _partitionKey = "0";
@@ -28,14 +28,14 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     {
         try
         {
-            using var scope = _serviceScopeFactory.CreateScope();
+            using var scope = serviceScopeFactory.CreateScope();
             var httpService = scope.ServiceProvider.GetRequiredService<IHttpService>();
 
-            await httpService.PostAsync("https://localhost:7286/api/Emotes/v1/AllGlobalEmotes", null, null, null, null, ct);
+            await httpService.PostAsync($"{_appBaseConfig.EmoteApi}/api/Emotes/v1/AllGlobalEmotes", null, null, null, null, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error preloading global emotes: {error}", ex.Message);
+            logger.LogError("Error preloading global emotes: {error}", ex.Message);
         }
     }
 
@@ -43,7 +43,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     {
         var config = GetConsumerConfig();
 
-        _kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
+        kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
     }
 
     private KafkaConsumerConfig GetConsumerConfig()
@@ -52,7 +52,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
         {
             Topic = _topic,
             TargetPartition = _partitionKey,
-            BootstrapServers = "localhost:9092",
+            BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
             GroupId = _groupId,
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
@@ -67,27 +67,27 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
             if (message is null)
                 return;
 
-            using var scope = _serviceScopeFactory.CreateScope();
+            using var scope = serviceScopeFactory.CreateScope();
 
             var msgService = scope.ServiceProvider.GetRequiredService<ITwitchMessageService>();
 
             var processedMessage = await msgService.ProcessTwitchMessage(message);
 
-            await _kafkaService.ProduceAsync(new KafkaProducerConfig
+            await kafkaService.ProduceAsync(new KafkaProducerConfig
             {
                 Topic = "twitch-channel-processed-messages",
                 TargetPartition = "0",
-                BootstrapServers = "localhost:9092"
+                BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
             }, JsonConvert.SerializeObject(processedMessage));
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error processing message: {error}", ex.Message);
+            logger.LogError("Error processing message: {error}", ex.Message);
         }
     }
 
     private async Task OnConsumerException(ConsumeException e)
     {
-        _logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
+        logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
     }
 }

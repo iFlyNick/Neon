@@ -2,6 +2,7 @@ using Neon.Core.Extensions;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
 using Neon.TwitchMessageService.Consumers;
+using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Services.Twitch;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -10,6 +11,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.ConfigureRedis(hostContext.Configuration);
         services.ConfigureSerilog(hostContext.Configuration);
 
+        services.Configure<AppBaseConfig>(hostContext.Configuration.GetSection("AppBaseConfig"));
+        
         services.AddHttpClient();
         services.AddTransient<IHttpService, HttpService>();
 

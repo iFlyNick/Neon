@@ -118,7 +118,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             {
                 Topic = "twitch-channel-chats",
                 TargetPartition = "0",
-                BootstrapServers = "localhost:9092"
+                BootstrapServers = _baseKafkaConfig.BootstrapServers
             }, JsonConvert.SerializeObject(twitchMessage), null, ct);
         }, ct);
 

@@ -1,4 +1,5 @@
-﻿using Neon.Core.Services.Http;
+﻿using Microsoft.Extensions.Options;
+using Neon.Core.Services.Http;
 using Neon.Core.Services.Redis;
 using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Models.Emotes;
@@ -7,8 +8,10 @@ using Newtonsoft.Json;
 
 namespace Neon.TwitchMessageService.Services.Twitch;
 
-public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService) : ITwitchMessageService
+public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService, IOptions<AppBaseConfig> appBaseConfig) : ITwitchMessageService
 {
+    private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
+    
     private const string GlobalEmoteCacheKey = "globalEmotes";
 
     public async Task<ProcessedMessage?> ProcessTwitchMessage(string? message, CancellationToken ct = default)
@@ -48,7 +51,7 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
                 if (string.IsNullOrEmpty(emoteChannelId))
                     continue;
 
-                var url = $"https://localhost:7286/api/Emotes/v1/TwitchChannelEmotes?broadcasterId={channelId}";
+                var url = $"{_appBaseConfig.EmoteApi}/api/Emotes/v1/TwitchChannelEmotes?broadcasterId={channelId}";
                 await httpService.PostAsync(url, null, null, null, null, ct);
 
                 var customEmoteCacheKey = $"customEmotes-{emoteChannelId}";
