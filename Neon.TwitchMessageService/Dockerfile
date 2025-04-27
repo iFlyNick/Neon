@@ -8,7 +8,6 @@ WORKDIR /src
 COPY ["Neon.TwitchMessageService/Neon.TwitchMessageService.csproj", "Neon.TwitchMessageService/"]
 COPY ["Neon.Core/Neon.Core.csproj", "Neon.Core/"]
 COPY ["Neon.Persistence/Neon.Persistence.csproj", "Neon.Persistence/"]
-COPY ["Neon.TwitchService/Neon.TwitchService.csproj", "Neon.TwitchService/"]
 RUN dotnet restore "Neon.TwitchMessageService/Neon.TwitchMessageService.csproj"
 COPY . .
 WORKDIR "/src/Neon.TwitchMessageService"
