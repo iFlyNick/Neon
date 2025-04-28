@@ -37,6 +37,9 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         }
         
         var channelId = twitchMessage.Payload.Event.BroadcasterUserId;
+
+        //a bit overkill, but the internal api should be quick and it will precheck the cache anyway
+        await PreloadGlobalEmotes(ct);
         
         await PreloadMessageEmotesToCache(twitchMessage, ct);
         var allEmotes = await GetCachedEmotes(twitchMessage, ct);
@@ -52,6 +55,21 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         return processedMessage;
     }
 
+    private async Task PreloadGlobalEmotes(CancellationToken ct)
+    {
+        try
+        {
+            logger.LogDebug("Preloading global emotes");
+            var url = $"{_appBaseConfig.EmoteApi}/api/Emotes/v1/AllGlobalEmotes";
+            var resp = await httpService.PostAsync(url, null, null, null, null, ct);
+            logger.LogDebug("Http request to emote api returned response code: {responseCode}", resp?.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error preloading global emotes: {error}", ex.Message);
+        }
+    }
+    
     private async Task PreloadMessageEmotesToCache(Message? message, CancellationToken ct = default)
     {
         if (message is null || message.Payload is null || message.Payload.Event is null)
