@@ -97,9 +97,9 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         await wsService.SubscribeChannelAsync(broadcasterAccount.BroadcasterId, broadcasterAccount.AccessToken, null, ct);
     }
 
-    public async Task SubscribeUserToChat(string? userName, string? broadcasterName, string? overrideBroadcasterId = null, CancellationToken ct = default)
+    public async Task SubscribeUserToChat(string? userName, string? broadcasterName, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(userName) || (string.IsNullOrEmpty(broadcasterName) && string.IsNullOrEmpty(overrideBroadcasterId)))
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(broadcasterName))
             return;
 
         logger.LogDebug("Subscribing to chat {broadcasterName} using username of {userName}", broadcasterName, userName);
@@ -130,7 +130,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         var appAccount = await twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
         var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
 
-        if (appAccount is null || userAccount is null || (broadcasterAccount is null && string.IsNullOrEmpty(overrideBroadcasterId)))
+        if (appAccount is null || userAccount is null || broadcasterAccount is null)
         {
             logger.LogError("Unable to find app account or user account. AppAccount: {appAccount}, UserAccount: {userAccount}, BroadcasterAccount: {broadcasterAccount}", appAccount?.AppName, userAccount?.LoginName, broadcasterAccount?.LoginName);
             throw new Exception("ruh roh");
@@ -167,8 +167,8 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             _ = await twitchDbService.UpdateTwitchAccountAuthAsync(userAccount.BroadcasterId, userAccount.AccessToken, ct);
         }
 
-        logger.LogDebug("Subscribing bot to chat for {broadcasterName}", string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId);
-        await wsService.SubscribeChannelChatAsync(string.IsNullOrEmpty(overrideBroadcasterId) ? broadcasterAccount!.BroadcasterId : overrideBroadcasterId, userAccount.BroadcasterId, userAccount.AccessToken, null, ct);
+        logger.LogDebug("Subscribing bot to chat for {broadcasterName}", broadcasterAccount.BroadcasterId);
+        await wsService.SubscribeChannelChatAsync(broadcasterAccount.BroadcasterId, userAccount.BroadcasterId, userAccount.AccessToken, null, ct);
     }
 
     public async Task Unsubscribe(string? broadcasterName, CancellationToken ct = default)

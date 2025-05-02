@@ -11,4 +11,5 @@ public interface ITwitchDbService
     Task<int> UpsertTwitchAccountAsync(TwitchAccount? account, CancellationToken ct = default);
     Task<List<TwitchAccount>?> GetSubscribedTwitchAccountsAsync(CancellationToken ct = default);
     Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default);
+    Task<List<TwitchAccount>?> GetAllSubscribedChannelAccounts(CancellationToken ct = default);
 }

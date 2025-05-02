@@ -5,6 +5,7 @@ using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
 using Neon.Core.Services.Twitch.Helix;
 using Neon.TwitchService.Models.Kafka;
+using Neon.TwitchService.Services;
 using Neon.TwitchService.Services.WebSocketManagers;
 using Neon.TwitchService.Services.WebSockets;
 
@@ -25,6 +26,8 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddTransient<IKafkaService, KafkaService>();
 
+        services.AddScoped<IStartupService, StartupService>();
+
         services.AddSingleton<IWebSocketManager, WebSocketManager>();
         services.AddTransient<IWebSocketService, WebSocketService>();
     })
@@ -32,16 +35,8 @@ var host = Host.CreateDefaultBuilder(args)
 
 var scope = host.Services.CreateScope();
 
-
-var wsManagerService = scope.ServiceProvider.GetRequiredService<IWebSocketManager>();
-await wsManagerService.Subscribe("iflynick");
-
-var botWsManagerService = scope.ServiceProvider.GetRequiredService<IWebSocketManager>();
-await botWsManagerService.SubscribeUserToChat("TheNeonBot", "iflynick");
-//await botWsManagerService.SubscribeBotToChat("TheNeonBot", null, "267160288");
-
-//var helixService = scope.ServiceProvider.GetRequiredService<IHelixService>();
-//await Task.Delay(2000);
-//await helixService.SendMessageAsUser("The bot is connected! BEEP BOOP.", "801173166", "114177217");
+var startupService = scope.ServiceProvider.GetRequiredService<IStartupService>();
+var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(300)).Token;
+await startupService.SubscribeAllActiveChannels(cancellationToken);
 
 await host.RunAsync();

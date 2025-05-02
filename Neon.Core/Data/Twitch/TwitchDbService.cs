@@ -164,4 +164,23 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
 
         return await _context.SaveChangesAsync(ct);
     }
+
+    public async Task<List<TwitchAccount>?> GetAllSubscribedChannelAccounts(CancellationToken ct = default)
+    {
+        if (_context.TwitchAccount is null)
+        {
+            _logger.LogError("TwitchAccount context is null!");
+            return null;
+        }
+        
+        var accounts = await _context.TwitchAccount.AsNoTracking().Where(s => !s.IsAuthorizationRevoked ?? false).ToListAsync(ct);
+        
+        if (accounts is null || accounts.Count == 0)
+        {
+            _logger.LogWarning("No subscribed twitch accounts found.");
+            return null;
+        }
+
+        return accounts;
+    }
 }
