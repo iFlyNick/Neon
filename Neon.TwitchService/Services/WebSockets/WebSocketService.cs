@@ -288,6 +288,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             await HandleMessage(msg, callback, ct);
             Array.Clear(buffer, 0, buffer.Length);
         }
+
+        logger.LogDebug("Websocket listen async method has exited the while loop, the connection will be closed.");
     }
 
     private async Task HandleMessage(string? message, Func<Message?, Task> callback, CancellationToken ct = default)

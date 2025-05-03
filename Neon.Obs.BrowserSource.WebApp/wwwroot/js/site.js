@@ -1,25 +1,44 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿const connection = new signalR.HubConnectionBuilder().withUrl("/twitchchat").withAutomaticReconnect().build();
 
-// Write your JavaScript code.
-var connection = new signalR.HubConnectionBuilder().withUrl("/twitchchat").build();
-
-var chatCounter = 0;
-
-connection.start().then(function () {
-    console.log("signalr connection started");
-}).catch(function (err) {
-    return console.error(err.toString());
+connection.onreconnecting(error => {
+    console.log("Reconnecting...", error);
 });
 
-connection.on("ReceiveMessage", function (message) {
+connection.onreconnected(connectionId => {
+    console.log("Reconnected. Connection ID:", connectionId);
+});
+
+connection.on("ReceiveMessage", appendChatMessage);
+
+connection.onclose(error => {
+   console.log("Connection closed. Attempting to reconnect...", error);
+   tryReconnect();
+});
+
+async function tryReconnect() {
+    while (true) {
+        try {
+            await connection.start();
+            break;
+        } catch (err) {
+            console.error("Reconnection attempt failed:", err);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    } 
+}
+
+function appendChatMessage(message) {
+    var chatCounter = 0;
+
     var id = `chatid-${chatCounter}`;
 
     var badgeSpan = "";
 
-    message.chatterBadges.forEach((badge) => {
-        badgeSpan += `<span><img src="${badge.imageUrl}" alt="${badge.id}"/></span> `;
-    });
+    if (message.chatterBadges != null && message.chatterBadges.length > 0) {
+        message.chatterBadges.forEach((badge) => {
+            badgeSpan += `<span><img src="${badge.imageUrl}" alt="${badge.id}"/></span> `;
+        });
+    }
 
     $("#chatapp").append(`<p id="${id}">${badgeSpan}<span style="color:${message.chatterColor}">${message.chatterName}</span>: <span class="twitch-message">${message.message}</span></p>`);
 
@@ -31,5 +50,17 @@ connection.on("ReceiveMessage", function (message) {
         $(`#${id}`).fadeOut(1000, function() {
             $(`#${id}`).remove();
         });
-    }, 20000);
-});
+    }, 60000);
+}
+
+async function startConnection() {
+    try {
+        await connection.start();
+        console.log("SignalR Connected.");
+    } catch (err) {
+        console.error(err);
+        setTimeout(() => startConnection(), 5000);
+    }
+}
+
+startConnection();

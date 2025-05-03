@@ -15,7 +15,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
     private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
     
     private const string GlobalEmoteCacheKey = "globalEmotes";
-
+    private const string DefaultChatterColor = "#E79A55";
+    
     public async Task<ProcessedMessage?> ProcessTwitchMessage(string? message, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(message))
@@ -193,7 +194,7 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
                 Message = message.Payload.Event.TwitchMessage.Text,
                 ChannelName = message.Payload.Event.BroadcasterUserName,
                 ChatterName = message.Payload.Event.ChatterUserName,
-                ChatterColor = message.Payload.Event.Color,
+                ChatterColor = string.IsNullOrEmpty(message.Payload.Event.Color) ? DefaultChatterColor : message.Payload.Event.Color,
                 ChatterBadges = providerBadges
             };
             
@@ -220,7 +221,7 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             Message = processedMessage,
             ChannelName = message.Payload.Event.BroadcasterUserName,
             ChatterName = message.Payload.Event.ChatterUserName,
-            ChatterColor = message.Payload.Event.Color,
+            ChatterColor = string.IsNullOrEmpty(message.Payload.Event.Color) ? DefaultChatterColor : message.Payload.Event.Color,
             ChatterBadges = providerBadges
         };
 

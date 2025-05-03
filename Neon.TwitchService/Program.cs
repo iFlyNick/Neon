@@ -36,7 +36,6 @@ var host = Host.CreateDefaultBuilder(args)
 var scope = host.Services.CreateScope();
 
 var startupService = scope.ServiceProvider.GetRequiredService<IStartupService>();
-var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(300)).Token;
-await startupService.SubscribeAllActiveChannels(cancellationToken);
+await startupService.SubscribeAllActiveChannels(CancellationToken.None);
 
 await host.RunAsync();

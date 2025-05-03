@@ -7,7 +7,8 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpClient<IHttpService, HttpService>();
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<IHttpService, HttpService>();
 
 builder.Services.ConfigureSerilog(builder.Configuration);
 builder.Services.ConfigureNeonDbContext(builder.Configuration);
