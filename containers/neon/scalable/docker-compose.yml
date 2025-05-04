@@ -1,0 +1,63 @@
+name: neon
+
+services:   
+  twitch-service:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.TwitchService/Dockerfile
+    container_name: twitch-service
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - BaseKafkaConfig__BootstrapServers=kafka:29092
+    networks:
+      - ${DEFAULT_NETWORK}
+
+  emote-service:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.Emotes.Api/Dockerfile
+    container_name: emote-service
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - ConnectionStrings__Redis=redis:6379
+    ports:
+      - "${EMOTE_SERVICE_EXTERNAL_PORT}:8080"
+    networks:
+      - ${DEFAULT_NETWORK}
+  
+  twitch-message-service:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.TwitchMessageService/Dockerfile
+    container_name: twitch-message-service
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - AppBaseConfig__KafkaBootstrapServers=kafka:29092
+      - AppBaseConfig__EmoteApi=http://emote-service:8080
+    depends_on:
+      emote-service:
+        condition: service_started
+    networks:
+      - ${DEFAULT_NETWORK}
+    
+  obs-browser-source:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.Obs.BrowserSource.WebApp/Dockerfile
+    container_name: obs-browser-source
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - BaseKafkaConfig__BootstrapServers=kafka:29092
+    ports:
+      - "${OBS_SERVICE_EXTERNAL_PORT}:8080"
+    networks:
+      - ${DEFAULT_NETWORK}
+
+networks:
+  neon_network:
+    driver: bridge
+    name: ${DEFAULT_NETWORK}

@@ -1,0 +1,135 @@
+﻿name: neon
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: local
+    ports:
+      - "${KAFKA_EXTERNAL_PORT}:9092"
+    volumes:
+      - kafka:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ${DEFAULT_NETWORK}
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    ports:
+      - "${KAFKA_UI_EXTERNAL_PORT}:8080"
+    volumes:
+      - kafka-ui:/var/lib/kafka-ui/data
+    networks:
+      - ${DEFAULT_NETWORK}
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ${DEFAULT_NETWORK}
+  
+  pg-admin:
+    image: dpage/pgadmin4:latest
+    container_name: pg-admin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "${PGADMIN_EXTERNAL_PORT}:80"
+    volumes:
+      - pg-admin:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ${DEFAULT_NETWORK}
+  
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "${REDIS_EXTERNAL_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+      - ${DEFAULT_NETWORK}
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "${REDIS_INSIGHT_EXTERNAL_PORT}:5540"
+    volumes:
+      - redisinsight:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ${DEFAULT_NETWORK}
+
+volumes:
+  postgres:
+    name: neon_postgres
+    external: true
+  kafka:
+    name: neon_kafka
+    external: true
+  kafka-ui:
+    name: neon_kafka-ui
+    external: true
+  pg-admin:
+    name: neon_pg-admin
+    external: true
+  redis-data:
+    name: neon_redis-data
+    external: true
+  redisinsight:
+    name: neon_redisinsight
+    external: true
+
+networks:
+  neon_network:
+    driver: bridge
+    name: ${DEFAULT_NETWORK}
