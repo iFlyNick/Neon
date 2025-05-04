@@ -5,9 +5,6 @@ namespace Neon.Core.Services.Redis;
 
 public class RedisService(ILogger<RedisService> logger, IDistributedCache cache) : IRedisService
 {
-    private readonly ILogger<RedisService> _logger = logger;
-    private readonly IDistributedCache _cache = cache;
-
     public async Task<bool> Exists(string? key, CancellationToken ct = default)
     {
         var value = await Get(key, ct);
@@ -19,15 +16,15 @@ public class RedisService(ILogger<RedisService> logger, IDistributedCache cache)
     {
         if (string.IsNullOrEmpty(key))
         {
-            _logger.LogError("Key is null or empty.");
+            logger.LogError("Key is null or empty.");
             return null;
         }
 
-        var value = await _cache.GetStringAsync(key, ct);
+        var value = await cache.GetStringAsync(key, ct);
 
         if (string.IsNullOrEmpty(value))
         {
-            _logger.LogWarning("Key {key} not found in cache.", key);
+            logger.LogWarning("Key {key} not found in cache.", key);
             return null;
         }
 
@@ -39,7 +36,7 @@ public class RedisService(ILogger<RedisService> logger, IDistributedCache cache)
     {
         if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(value))
         {
-            _logger.LogError("Key or value is null or empty.");
+            logger.LogError("Key or value is null or empty.");
             return;
         }
 
@@ -50,7 +47,22 @@ public class RedisService(ILogger<RedisService> logger, IDistributedCache cache)
             options.SetAbsoluteExpiration(expiration.Value);
         }
 
-        await _cache.SetStringAsync(key, value, options, ct);
+        await cache.SetStringAsync(key, value, options, ct);
+    }
+
+    public async Task Remove(string? key, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            logger.LogDebug("Key is null or empty. Unable to remove from cache.");
+            return;
+        }
+        
+        var keyExists = await Exists(key, ct);
+        if (!keyExists)
+            return;
+        
+        await cache.RemoveAsync(key, ct);
     }
 
     //public async Task Update(string? key, string? value, TimeSpan? expiration = null, CancellationToken ct = default)
