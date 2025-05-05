@@ -1,6 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
+using Neon.Core.Models;
+using Neon.Core.Models.Chatbot;
+using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Http;
+using Neon.Core.Services.Kafka;
 using Neon.Core.Services.Redis;
 using Neon.TwitchMessageService.Models;
 using Neon.TwitchMessageService.Models.Badges;
@@ -10,9 +14,10 @@ using Newtonsoft.Json;
 
 namespace Neon.TwitchMessageService.Services.Twitch;
 
-public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService, IOptions<AppBaseConfig> appBaseConfig, IBadgeService badgeService) : ITwitchMessageService
+public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpService httpService, IRedisService redisService, IKafkaService kafkaService, IOptions<AppBaseConfig> appBaseConfig, IBadgeService badgeService, IOptions<NeonSettings> neonSettings) : ITwitchMessageService
 {
     private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
+    private readonly NeonSettings _neonSettings = neonSettings.Value ?? throw new ArgumentNullException(nameof(neonSettings));
     
     private const string GlobalEmoteCacheKey = "globalEmotes";
     private const string DefaultChatterColor = "#E79A55";
@@ -36,9 +41,27 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             logger.LogError("Full message text is null or empty.");
             return null;
         }
-        
+
         var channelId = twitchMessage.Payload.Event.BroadcasterUserId;
 
+        //check if this message is a command, if so, send it to the topic and continue on
+        if (_neonSettings.ChatCommandPrefix is not null &&
+            twitchMessage.Payload.Event.TwitchMessage.Text.StartsWith(_neonSettings.ChatCommandPrefix ?? '!'))
+        {
+            var chatbotMessage = new ChatbotMessage
+            {
+                Message = twitchMessage.Payload.Event.TwitchMessage.Text,
+                ChannelName = twitchMessage.Payload.Event.BroadcasterUserName,
+                ChannelId = channelId,
+                ChatterName = twitchMessage.Payload.Event.ChatterUserName,
+                ChatterId = twitchMessage.Payload.Event.ChatterUserId,
+                EventType = "message",
+                EventMessage = null //this won't be used for chat based commands
+            };
+            
+            await ProduceChatbotMessage(chatbotMessage, ct);
+        }
+        
         //a bit overkill, but the internal api should be quick and it will precheck the cache anyway
         await PreloadGlobalEmotes(ct);
         
@@ -226,5 +249,25 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         };
 
         return retVal;
+    }
+
+    private async Task ProduceChatbotMessage(ChatbotMessage? message, CancellationToken ct = default)
+    {
+        if (message is null)
+            return;
+        
+        var kafkaProducerConfig = GetKafkaProducerConfig();
+        
+        await kafkaService.ProduceAsync(kafkaProducerConfig, JsonConvert.SerializeObject(message), null, ct);
+    }
+
+    private KafkaProducerConfig GetKafkaProducerConfig()
+    {
+        return new KafkaProducerConfig
+        {
+            Topic = "twitch-chatbot-messages",
+            TargetPartition = "0",
+            BootstrapServers = _appBaseConfig.KafkaBootstrapServers
+        };
     }
 }

@@ -56,6 +56,18 @@ services:
       - "${OBS_SERVICE_EXTERNAL_PORT}:8080"
     networks:
       - ${DEFAULT_NETWORK}
+        
+  twitch-chatbot-service:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.TwitchChatbotService/Dockerfile
+    container_name: twitch-chatbot-service
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - AppBaseConfig__KafkaBootstrapServers=kafka:29092
+    networks:
+      - ${DEFAULT_NETWORK}
 
 networks:
   neon_network:

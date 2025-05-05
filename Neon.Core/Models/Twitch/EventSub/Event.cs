@@ -55,6 +55,17 @@ public class Event
     public string? EndsAt { get; set; }
     [JsonProperty("is_permanent")]
     public bool? IsPermanent { get; set; }
+    
+    //gift sub details
+    [JsonProperty("is_anonymous")]
+    public bool? IsAnonymous { get; set; }
+    [JsonProperty("total")]
+    public string? Total { get; set; }
+    [JsonProperty("is_gift")]
+    public bool? IsGift { get; set; }
+    [JsonProperty("tier")]
+    public string? Tier { get; set; }
+    
     [JsonProperty("duration_seconds")]
     public int? DurationSeconds { get; set; }
     [JsonProperty("started_at")]
