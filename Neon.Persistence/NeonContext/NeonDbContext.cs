@@ -10,6 +10,8 @@ public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(
     private const string DefaultDbUser = "NeonApiService";
 
     public DbSet<AppAccount> AppAccount { get; set; }
+    public DbSet<AuthorizationScope> AuthorizationScope { get; set; }
+    public DbSet<AuthorizationScopeSubscriptionType> AuthorizationScopeSubscriptionType { get; set; }
     public DbSet<SubscriptionType> SubscriptionType { get; set; }
     public DbSet<TwitchAccount> TwitchAccount { get; set; }
     public DbSet<TwitchAccountAuth> TwitchAccountAuth { get; set; }

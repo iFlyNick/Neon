@@ -3,32 +3,32 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Neon.Persistence.EntityModels.Twitch;
 
-public class SubscriptionType : BaseModel
+public class AuthorizationScope : BaseModel
 {
-    public Guid? SubscriptionTypeId { get; set; }
+    public Guid? AuthorizationScopeId { get; set; }
     public string? Name { get; set; }
-    public string? Version { get; set; }
-    public string? Description { get; set; }
     
+    public ICollection<TwitchAccountScope>? TwitchAccountScopes { get; set; }
     public ICollection<AuthorizationScopeSubscriptionType>? AuthorizationScopeSubscriptionTypes { get; set; }
 }
 
-public class SubscriptionTypeConfiguration : IEntityTypeConfiguration<SubscriptionType>
+public class AuthorizationScopeConfiguration : IEntityTypeConfiguration<AuthorizationScope>
 {
-    public void Configure(EntityTypeBuilder<SubscriptionType> builder)
+    public void Configure(EntityTypeBuilder<AuthorizationScope> builder)
     {
         //schema
-        builder.ToTable("subscription_type", "twitch");
+        builder.ToTable("authorization_scope", "twitch");
         
         //pk
-        builder.HasKey(s => s.SubscriptionTypeId);
+        builder.HasKey(s => s.AuthorizationScopeId);
 
         //indexes
         builder.HasIndex(s => s.Name);
 
         //relationships
+        builder.HasMany(s => s.TwitchAccountScopes).WithOne(s => s.AuthorizationScope).HasForeignKey(s => s.AuthorizationScopeId);
         builder.HasMany(s => s.AuthorizationScopeSubscriptionTypes)
-            .WithOne(s => s.SubscriptionType).HasForeignKey(s => s.SubscriptionTypeId);
+            .WithOne(s => s.AuthorizationScope).HasForeignKey(s => s.AuthorizationScopeId);
 
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();
@@ -37,9 +37,7 @@ public class SubscriptionTypeConfiguration : IEntityTypeConfiguration<Subscripti
         builder.Property(s => s.ModifiedBy).HasColumnOrder(5).HasMaxLength(50);
 
         //columns
-        builder.Property(s => s.SubscriptionTypeId).HasColumnOrder(1).ValueGeneratedOnAdd();
+        builder.Property(s => s.AuthorizationScopeId).HasColumnOrder(1).ValueGeneratedOnAdd();
         builder.Property(s => s.Name).IsRequired().HasMaxLength(100);
-        builder.Property(s => s.Version).IsRequired().HasMaxLength(10);
-        builder.Property(s => s.Description).IsRequired().HasMaxLength(500);
     }
 }

@@ -11,8 +11,11 @@ public class DataGenerator(ILogger<DataGenerator> logger, NeonDbContext neonCont
     {
         //TODO: preload app account for true startup for given user?
         await PreloadSubscriptionTypes(ct);
+        await PreloadAuthorizationScopes(ct);
+        
+        await PreloadAuthorizationScopeSubscriptionTypes(ct);
     }
-
+    
     private async Task PreloadSubscriptionTypes(CancellationToken ct = default)
     {
         var subscriptionTypes = GetSubscriptionTypes();
@@ -23,7 +26,7 @@ public class DataGenerator(ILogger<DataGenerator> logger, NeonDbContext neonCont
         {
             //db has nothing, just add the range
             logger.LogDebug("No subscription types found in db, adding default types.");
-            await neonContext.SubscriptionType.AddRangeAsync(subscriptionTypes, ct);
+            neonContext.SubscriptionType.AddRange(subscriptionTypes);
             await neonContext.SaveChangesAsync(ct);
             return;
         }
@@ -541,5 +544,909 @@ public class DataGenerator(ILogger<DataGenerator> logger, NeonDbContext neonCont
         };
         
         return subscriptionTypes;
+    }
+
+    private async Task PreloadAuthorizationScopes(CancellationToken ct = default)
+    {
+        var authScopes = GetAuthorizationScopes();
+
+        var dbScopes = await neonContext.AuthorizationScope.ToListAsync(ct);
+
+        if (dbScopes.Count == 0)
+        {
+            //db has nothing, just add the range
+            logger.LogDebug("No auth scopes found in db, adding default types.");
+            neonContext.AuthorizationScope.AddRange(authScopes);
+            await neonContext.SaveChangesAsync(ct);
+            return;
+        }
+        
+        //db has some data, check if we need to add any new scopes
+        foreach (var scope in authScopes)
+        {
+            var dbScope = dbScopes.FirstOrDefault(s => s.Name == scope.Name);
+            if (dbScope is null)
+                neonContext.AuthorizationScope.Add(scope);
+        }
+
+        //purge any types that are no longer in the list
+        var removeList = dbScopes.Where(s => authScopes.All(t => t.Name != s.Name)).ToList();
+        if (removeList.Count > 0)
+        {
+            neonContext.AuthorizationScope.RemoveRange(removeList);
+            logger.LogDebug("Removed {count} auth scopes from db.", removeList.Count);
+        }
+        
+        if (neonContext.ChangeTracker.HasChanges())
+            await neonContext.SaveChangesAsync(ct);
+    }
+
+    private static List<AuthorizationScope> GetAuthorizationScopes()
+    {
+        //https://dev.twitch.tv/docs/authentication/scopes/#twitch-access-token-scopes
+        var scopes = new List<AuthorizationScope>
+        {
+            new()
+            {
+                Name = "analytics:read:extensions"
+            },
+            new()
+            {
+                Name = "analytics:read:games"
+            },
+            new()
+            {
+                Name = "bits:read"
+            },
+            new()
+            {
+                Name = "channel:bot"
+            },
+            new()
+            {
+                Name = "channel:manage:ads"
+            },
+            new()
+            {
+                Name = "channel:read:ads"
+            },
+            new()
+            {
+                Name = "channel:manage:broadcast"
+            },
+            new()
+            {
+                Name = "channel:read:charity"
+            },
+            new()
+            {
+                Name = "channel:edit:commercial"
+            },
+            new()
+            {
+                Name = "channel:read:editors"
+            },
+            new()
+            {
+                Name = "channel:manage:extensions"
+            },
+            new()
+            {
+                Name = "channel:read:goals"
+            },
+            new()
+            {
+                Name = "channel:read:guest_star"
+            },
+            new()
+            {
+                Name = "channel:manage:guest_star"
+            },
+            new()
+            {
+                Name = "channel:read:hype_train"
+            },
+            new()
+            {
+                Name = "channel:manage:moderators"
+            },
+            new()
+            {
+                Name = "channel:read:polls"
+            },
+            new()
+            {
+                Name = "channel:manage:polls"
+            },
+            new()
+            {
+                Name = "channel:read:predictions"
+            },
+            new()
+            {
+                Name = "channel:manage:predictions"
+            },
+            new()
+            {
+                Name = "channel:manage:raids"
+            },
+            new()
+            {
+                Name = "channel:read:redemptions"
+            },
+            new()
+            {
+                Name = "channel:manage:redemptions"
+            },
+            new()
+            {
+                Name = "channel:manage:schedule"
+            },
+            new()
+            {
+                Name = "channel:read:stream_key"
+            },
+            new()
+            {
+                Name = "channel:read:subscriptions"
+            },
+            new()
+            {
+                Name = "channel:manage:videos"
+            },
+            new()
+            {
+                Name = "channel:read:vips"
+            },
+            new()
+            {
+                Name = "channel:manage:vips"
+            },
+            new()
+            {
+                Name = "channel:moderate"
+            },
+            new()
+            {
+                Name = "clips:edit"
+            },
+            new()
+            {
+                Name = "moderation:read"
+            },
+            new()
+            {
+                Name = "moderator:manage:announcements"
+            },
+            new()
+            {
+                Name = "moderator:manage:automod"
+            },
+            new()
+            {
+                Name = "moderator:read:automod_settings"
+            },
+            new()
+            {
+                Name = "moderator:manage:automod_settings"
+            },
+            new()
+            {
+                Name = "moderator:read:banned_users"
+            },
+            new()
+            {
+                Name = "moderator:manage:banned_users"
+            },
+            new()
+            {
+                Name = "moderator:read:blocked_terms"
+            },
+            new()
+            {
+                Name = "moderator:read:chat_messages"
+            },
+            new()
+            {
+                Name = "moderator:manage:blocked_terms"
+            },
+            new()
+            {
+                Name = "moderator:manage:chat_messages"
+            },
+            new()
+            {
+                Name = "moderator:read:chat_settings"
+            },
+            new()
+            {
+                Name = "moderator:manage:chat_settings"
+            },
+            new()
+            {
+                Name = "moderator:read:chatters"
+            },
+            new()
+            {
+                Name = "moderator:read:followers"
+            },
+            new()
+            {
+                Name = "moderator:read:guest_star"
+            },
+            new()
+            {
+                Name = "moderator:manage:guest_star"
+            },
+            new()
+            {
+                Name = "moderator:read:moderators"
+            },
+            new()
+            {
+                Name = "moderator:read:shield_mode"
+            },
+            new()
+            {
+                Name = "moderator:manage:shield_mode"
+            },
+            new()
+            {
+                Name = "moderator:read:shoutouts"
+            },
+            new()
+            {
+                Name = "moderator:manage:shoutouts"
+            },
+            new()
+            {
+                Name = "moderator:read:suspicious_users"
+            },
+            new()
+            {
+                Name = "moderator:read:unban_requests"
+            },
+            new()
+            {
+                Name = "moderator:manage:unban_requests"
+            },
+            new()
+            {
+                Name = "moderator:read:vips"
+            },
+            new()
+            {
+                Name = "moderator:read:warnings"
+            },
+            new()
+            {
+                Name = "moderator:manage:warnings"
+            },
+            new()
+            {
+                Name = "user:bot"
+            },
+            new()
+            {
+                Name = "user:edit"
+            },
+            new()
+            {
+                Name = "user:edit:broadcast"
+            },
+            new()
+            {
+                Name = "user:read:blocked_users"
+            },
+            new()
+            {
+                Name = "user:manage:blocked_users"
+            },
+            new()
+            {
+                Name = "user:read:broadcast"
+            },
+            new()
+            {
+                Name = "user:read:chat"
+            },
+            new()
+            {
+                Name = "user:manage:chat_color"
+            },
+            new()
+            {
+                Name = "user:read:email"
+            },
+            new()
+            {
+                Name = "user:read:emotes"
+            },
+            new()
+            {
+                Name = "user:read:follows"
+            },
+            new()
+            {
+                Name = "user:read:moderated_channels"
+            },
+            new()
+            {
+                Name = "user:read:subscriptions"
+            },
+            new()
+            {
+                Name = "user:read:whispers"
+            },
+            new()
+            {
+                Name = "user:manage:whispers"
+            },
+            new()
+            {
+                Name = "user:write:chat"
+            }
+        };
+        
+        return scopes;
+    }
+
+    private async Task PreloadAuthorizationScopeSubscriptionTypes(CancellationToken ct = default)
+    {
+        //need to fetch the types and scopes from the db to be able to create the relationship table as they join off ids only
+        var dbTypes = await neonContext.SubscriptionType.ToListAsync(ct);
+        var dbScopes = await neonContext.AuthorizationScope.ToListAsync(ct);
+        
+        if (dbTypes.Count == 0 || dbScopes.Count == 0)
+        {
+            logger.LogDebug("No subscription types or auth scopes found in db, unable to preload relationships.");
+            return;
+        }
+        
+        var authScopeSubscriptionTypes = new List<AuthorizationScopeSubscriptionType>();
+        
+        /*
+         * example of the process:
+         * scope:
+         *  - bits:read
+         * types:
+         *  - channel.bits.use
+         *  - channel.cheer
+         */
+
+        //not all scopes have types associated with them as not all scopes can be subscribed to via the eventsub.
+        //this only maps the scopes that have types associated with them
+        
+        //TODO: import this as a json file so it's not compiled code?
+        //key = auth scope, value = list of types
+        var authScopeTypes = new Dictionary<string, List<string>>
+        {
+            {
+                "analytics:read:extensions", 
+                []
+            },
+            {
+                "analytics:read:games", 
+                []
+            },
+            { 
+                "bits:read", 
+                [ 
+                    "channel.bits.use", 
+                    "channel.cheer" 
+                ] 
+            },
+            { 
+                "channel:bot", 
+                [ 
+                    "channel.chat.clear", 
+                    "channel.chat.clear_user_messages", 
+                    "channel.chat.message", 
+                    "channel.chat.message_delete", 
+                    "channel.chat.notification", 
+                    "channel.chat_settings.update"
+                ] 
+            },
+            {
+                "channel:manage:ads", 
+                []
+            },
+            { 
+                "channel:read:ads", 
+                [
+                    "channel.ad_break.begin"
+                ] 
+            },
+            {
+                "channel:manage:broadcast", 
+                []
+            },
+            { 
+                "channel:read:charity",
+                [
+                    "channel.charity_campaign.donate",
+                    "channel.charity_campaign.start",
+                    "channel.charity_campaign.progress",
+                    "channel.charity_campaign.stop"
+                ] 
+            },
+            {
+                "channel:edit:commercial", 
+                []
+            },
+            {
+                "channel:read:editors", 
+                []
+            },
+            {
+                "channel:manage:extensions", 
+                []
+            },
+            { 
+                "channel:read:goals", 
+                [
+                    "channel.goal.begin",
+                    "channel.goal.progress",
+                    "channel.goal.end"
+                ] 
+            },
+            { 
+                "channel:read:guest_star", 
+                [
+                    "channel.guest_star_session.begin",
+                    "channel.guest_star_session.end",
+                    "channel.guest_star_guest.update",
+                    "channel.guest_star_settings.update"
+                ]
+            },
+            { 
+                "channel:manage:guest_star", 
+                [
+                    "channel.guest_star_session.begin",
+                    "channel.guest_star_session.end",
+                    "channel.guest_star_guest.update",
+                    "channel.guest_star_settings.update"
+                ]
+            },
+            {
+                "channel:read:hype_train", 
+                [
+                    "channel.hype_train.begin",
+                    "channel.hype_train.progress",
+                    "channel.hype_train.end"
+                ]
+            },
+            {
+                "channel:manage:moderators", 
+                []
+            },
+            {
+                "channel:read:polls", 
+                [
+                    "channel.poll.begin",
+                    "channel.poll.progress",
+                    "channel.poll.end"
+                ]
+            },
+            {
+                "channel:manage:polls", 
+                [
+                    "channel.poll.begin",
+                    "channel.poll.progress",
+                    "channel.poll.end"
+                ]
+            },
+            {
+                "channel:read:predictions", 
+                [
+                    "channel.prediction.begin",
+                    "channel.prediction.progress",
+                    "channel.prediction.lock",
+                    "channel.prediction.end"
+                ]
+            },
+            {
+                "channel:manage:predictions", 
+                [
+                    "channel.prediction.begin",
+                    "channel.prediction.progress",
+                    "channel.prediction.lock",
+                    "channel.prediction.end"
+                ]
+            },
+            {
+                "channel:manage:raids", 
+                []
+            },
+            {
+                "channel:read:redemptions", 
+                [
+                    "channel.channel_points_automatic_reward_redemption.add",
+                    "channel.channel_points_custom_reward.add",
+                    "channel.channel_points_custom_reward.update",
+                    "channel.channel_points_custom_reward.remove",
+                    "channel.channel_points_custom_reward_redemption.add",
+                    "channel.channel_points_custom_reward_redemption.update"
+                ]
+            },
+            {
+                "channel:manage:redemptions",
+                [
+                    "channel.channel_points_automatic_reward_redemption.add",
+                    "channel.channel_points_custom_reward.add",
+                    "channel.channel_points_custom_reward.update",
+                    "channel.channel_points_custom_reward.remove",
+                    "channel.channel_points_custom_reward_redemption.add",
+                    "channel.channel_points_custom_reward_redemption.update"
+                ]
+            },
+            {
+                "channel:manage:schedule", 
+                []
+            },
+            {
+                "channel:read:stream_key", 
+                []
+            },
+            {
+                "channel:read:subscriptions", 
+                [
+                    "channel.subscribe",
+                    "channel.subscription.end",
+                    "channel.subscription.gift",
+                    "channel.subscription.message"
+                ]
+            },
+            {
+                "channel:manage:videos", 
+                []
+            },
+            {
+                "channel:read:vips", 
+                [
+                    "channel.vip.add",
+                    "channel.vip.remove"
+                ]
+            },
+            {
+                "channel:manage:vips", 
+                [
+                    "channel.vip.add",
+                    "channel.vip.remove"
+                ]
+            },
+            {
+                "channel:moderate", 
+                [
+                    "channel.ban",
+                    "channel.unban"
+                ]
+            },
+            {
+                "clips:edit", 
+                []
+            },
+            {
+                "moderation:read", 
+                [
+                    "channel.moderator.add",
+                    "channel.moderator.remove"
+                ]
+            },
+            {
+                "moderator:manage:announcements", 
+                []
+            },
+            {
+                "moderator:manage:automod", 
+                [
+                    "automod.message.hold",
+                    "automod.message.update",
+                    "automod.terms.update"
+                ]
+            },
+            {
+                "moderator:read:automod_settings", 
+                [
+                    "automod.settings.update"
+                ]
+            },
+            {
+                "moderator:manage:automod_settings", 
+                []
+            },
+            {
+                "moderator:read:banned_users", 
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:banned_users",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:blocked_terms",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:chat_messages",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:blocked_terms",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:chat_messages",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:chat_settings",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:chat_settings",
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:chatters", 
+                []
+            },
+            {
+                "moderator:read:followers", 
+                [
+                    "channel.follow"
+                ]
+            },
+            {
+                "moderator:read:guest_star", 
+                [
+                    "channel.guest_star_session.begin",
+                    "channel.guest_star_session.end",
+                    "channel.guest_star_guest.update",
+                    "channel.guest_star_settings.update"
+                ]
+            },
+            {
+                "moderator:manage:guest_star", 
+                [
+                    "channel.guest_star_session.begin",
+                    "channel.guest_star_session.end",
+                    "channel.guest_star_guest.update",
+                    "channel.guest_star_settings.update"
+                ]
+            },
+            {
+                "moderator:read:moderators", 
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:shield_mode", 
+                [
+                    "channel.shield_mode.begin",
+                    "channel.shield_mode.end"
+                ]
+            },
+            {
+                "moderator:manage:shield_mode", 
+                [
+                    "channel.shield_mode.begin",
+                    "channel.shield_mode.end"
+                ]
+            },
+            {
+                "moderator:read:shoutouts", 
+                [
+                    "channel.shoutout.create",
+                    "channel.shoutout.receive"
+                ]
+            },
+            {
+                "moderator:manage:shoutouts", 
+                [
+                    "channel.shoutout.create",
+                    "channel.shoutout.receive"
+                ]
+            },
+            {
+                "moderator:read:suspicious_users", 
+                [
+                    "channel.suspicious_user.message",
+                    "channel.suspicious_user.update"
+                ]
+            },
+            {
+                "moderator:read:unban_requests", 
+                [
+                    "channel.unban_request.create",
+                    "channel.unban_request.resolve",
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:unban_requests",
+                [
+                    "channel.unban_request.create",
+                    "channel.unban_request.resolve",
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:vips", 
+                [
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:read:warnings", 
+                [
+                    "channel.warning.acknowledge",
+                    "channel.warning.send",
+                    "channel.moderate"
+                ]
+            },
+            {
+                "moderator:manage:warnings", 
+                [
+                    "channel.warning.acknowledge",
+                    "channel.warning.send",
+                    "channel.moderate"
+                ]
+            },
+            {
+                "user:bot", 
+                [
+                    "channel.chat.clear",
+                    "channel.chat.clear_user_messages",
+                    "channel.chat.message",
+                    "channel.chat.message_delete",
+                    "channel.chat.notification",
+                    "channel.chat_settings.update",
+                    "channel.chat.user_message_hold",
+                    "channel.chat.user_message_update"
+                ]
+            },
+            {
+                "user:edit", 
+                []
+            },
+            {
+                "user:edit:broadcast", 
+                []
+            },
+            {
+                "user:read:blocked_users", 
+                []
+            },
+            {
+                "user:manage:blocked_users", 
+                []
+            },
+            {
+                "user:read:broadcast", 
+                []
+            },
+            {
+                "user:read:chat",
+                [
+                    "channel.chat.clear",
+                    "channel.chat.clear_user_messages",
+                    "channel.chat.message",
+                    "channel.chat.message_delete",
+                    "channel.chat.notification",
+                    "channel.chat_settings.update",
+                    "channel.chat.user_message_hold",
+                    "channel.chat.user_message_update"
+                ]
+            },
+            {
+                "user:manage:chat_color", 
+                []
+            },
+            {
+                "user:read:email", 
+                [
+                    "user.update"
+                ]
+            },
+            {
+                "user:read:emotes", 
+                []
+            },
+            {
+                "user:read:follows", 
+                []
+            },
+            {
+                "user:read:moderated_channels", 
+                []
+            },
+            {
+                "user:read:subscriptions", 
+                []
+            },
+            {
+                "user:read:whispers", 
+                [
+                    "user.whisper.message"
+                ]
+            },
+            {
+                "user:manage:whispers", 
+                [
+                    "user.whisper.message"
+                ]
+            },
+            {
+                "user:write:chat", 
+                []
+            }
+        };
+        
+        foreach (var scope in authScopeTypes)
+        {
+            var dbScope = dbScopes.FirstOrDefault(s => s.Name == scope.Key);
+            if (dbScope is null)
+                continue;
+
+            foreach (var type in scope.Value)
+            {
+                var dbType = dbTypes.FirstOrDefault(s => s.Name == type);
+                if (dbType is null)
+                    continue;
+
+                authScopeSubscriptionTypes.Add(new AuthorizationScopeSubscriptionType
+                {
+                    AuthorizationScopeId = dbScope.AuthorizationScopeId,
+                    SubscriptionTypeId = dbType.SubscriptionTypeId
+                });
+            }
+        }
+        
+        var dbRelationships = await neonContext.AuthorizationScopeSubscriptionType.ToListAsync(ct);
+        if (dbRelationships.Count == 0)
+        {
+            //db has nothing, just add the range
+            logger.LogDebug("No auth scope subscription types found in db, adding default types.");
+            neonContext.AuthorizationScopeSubscriptionType.AddRange(authScopeSubscriptionTypes);
+            await neonContext.SaveChangesAsync(ct);
+            return;
+        }
+        
+        //db has some data, check if we need to add any new relationships
+        foreach (var relationship in authScopeSubscriptionTypes)
+        {
+            var dbRelationship = dbRelationships.FirstOrDefault(s => s.AuthorizationScopeId == relationship.AuthorizationScopeId && s.SubscriptionTypeId == relationship.SubscriptionTypeId);
+            if (dbRelationship is null)
+                neonContext.AuthorizationScopeSubscriptionType.Add(relationship);
+        }
+        
+        //purge any types that are no longer in the list
+        var removeList = dbRelationships.Where(s => authScopeSubscriptionTypes.All(t => t.AuthorizationScopeId != s.AuthorizationScopeId && t.SubscriptionTypeId != s.SubscriptionTypeId)).ToList();
+        if (removeList.Count > 0)
+        {
+            neonContext.AuthorizationScopeSubscriptionType.RemoveRange(removeList);
+            logger.LogDebug("Removed {count} auth scope subscription types from db.", removeList.Count);
+        }
+        
+        if (neonContext.ChangeTracker.HasChanges())
+            await neonContext.SaveChangesAsync(ct);
     }
 }

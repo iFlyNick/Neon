@@ -7,10 +7,10 @@ public class TwitchAccountScope : BaseModel
 {
     public Guid? TwitchAccountScopeId { get; set; }
     public Guid? TwitchAccountId { get; set; }
-    public Guid? SubscriptionTypeId { get; set; }
+    public Guid? AuthorizationScopeId { get; set; }
     
     public TwitchAccount? TwitchAccount { get; set; }
-    public SubscriptionType? SubscriptionType { get; set; }
+    public AuthorizationScope? AuthorizationScope { get; set; }
 }
 
 public class TwitchAccountScopeConfiguration : IEntityTypeConfiguration<TwitchAccountScope>
@@ -28,7 +28,7 @@ public class TwitchAccountScopeConfiguration : IEntityTypeConfiguration<TwitchAc
         
         //relationships
         builder.HasOne(s => s.TwitchAccount).WithMany(s => s.TwitchAccountScopes).HasForeignKey(s => s.TwitchAccountId);
-        builder.HasOne(s => s.SubscriptionType).WithMany(s => s.TwitchAccountScopes).HasForeignKey(s => s.SubscriptionTypeId);
+        builder.HasOne(s => s.AuthorizationScope).WithMany(s => s.TwitchAccountScopes).HasForeignKey(s => s.AuthorizationScopeId);
         
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();
@@ -39,6 +39,6 @@ public class TwitchAccountScopeConfiguration : IEntityTypeConfiguration<TwitchAc
         //columns
         builder.Property(s => s.TwitchAccountScopeId).HasColumnOrder(1).ValueGeneratedOnAdd();
         builder.Property(s => s.TwitchAccountId).IsRequired();
-        builder.Property(s => s.SubscriptionTypeId).IsRequired();
+        builder.Property(s => s.AuthorizationScopeId).IsRequired();
     }
 }

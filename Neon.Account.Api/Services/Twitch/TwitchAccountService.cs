@@ -6,15 +6,12 @@ namespace Neon.Account.Api.Services.Twitch;
 
 public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchDbService twitchDbService) : ITwitchAccountService
 {
-    private readonly ILogger<TwitchAccountService> _logger = logger;
-    private readonly ITwitchDbService _twitchDbService = twitchDbService;
-
     public async Task CreateTwitchAccountFromOAuthAsync(TwitchUserAccountAuth? userAuth, CancellationToken ct = default)
     {
         //need to build a local account from the entire oauth process. at this point we should have most of the details we need to ensure user tokens are saved to the db for any access later
         if (userAuth is null || userAuth.AuthenticationResponse is null || userAuth.OAuthResponse is null || userAuth.OAuthValidationResponse is null || userAuth.TwitchUserAccount is null)
         {
-            _logger.LogError("Invalid user auth object received. Unable to create local twitch account representation!");
+            logger.LogError("Invalid user auth object received. Unable to create local twitch account representation!");
             return;
         }
 
@@ -39,6 +36,6 @@ public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchD
             AuthorizationScopes = (userAuth.OAuthValidationResponse.Scopes is null || userAuth.OAuthValidationResponse.Scopes.Count == 0) ? "" : string.Join(",", userAuth.OAuthValidationResponse.Scopes)
         };
 
-        await _twitchDbService.UpsertTwitchAccountAsync(dbAccount, ct);
+        await twitchDbService.UpsertTwitchAccountAsync(dbAccount, ct);
     }
 }
