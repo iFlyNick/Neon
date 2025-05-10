@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Neon.Persistence.EntityModels.Twitch;
 
-public partial class AppAccount : BaseModel
+public class AppAccount : BaseModel
 {
     public Guid? AppAccountId { get; set; }
     public string? AppName { get; set; }

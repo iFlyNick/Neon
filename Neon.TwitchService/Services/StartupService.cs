@@ -31,6 +31,7 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
                 logger.LogWarning("Broadcaster id is null or empty for account: {account}", account);
                 continue;
             }
+            
             await webSocketManager.Subscribe(account.LoginName, ct);
             logger.LogInformation("Subscribed to channel: {channelName}", account.LoginName);
             

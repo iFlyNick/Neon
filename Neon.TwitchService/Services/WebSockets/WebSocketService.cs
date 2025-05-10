@@ -94,7 +94,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
     }
 
-    public async Task SubscribeChannelChatAsync(string? twitchChannelId, string? userId, string? accessToken, List<SubscriptionType>? subscriptionsTypes, CancellationToken ct = default)
+    public async Task SubscribeChannelChatAsync(string? twitchChannelId, string? userId, string? accessToken, List<SubscriptionType>? subscriptionTypes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(_botSettings, nameof(_botSettings));
 
@@ -117,20 +117,19 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             return;
         }
 
+        if (subscriptionTypes is null || subscriptionTypes.Count == 0)
+        {
+            logger.LogWarning("Subscription type list is empty. Unable to subscribe to channel chat");
+            return;
+        }
+
         var authHeader = new AuthenticationHeaderValue("Bearer", accessToken);
         var headers = new Dictionary<string, string> 
         {
             { "Client-Id", _botSettings.ClientId } 
         };
 
-        var subscriptions = new List<(string, string)>
-        {
-            ("channel.chat.message", "1"),
-            ("channel.chat.notification", "1"),
-            ("channel.chat.clear", "1")
-        };
-
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in subscriptionTypes)
         {
             var message = new Message
             {
@@ -138,8 +137,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
                 {
                     Subscription = new Subscription
                     {
-                        Type = subscription.Item1,
-                        Version = subscription.Item2,
+                        Type = subscription.Name,
+                        Version = subscription.Version,
                         Condition = new Condition
                         {
                             BroadcasterUserId = twitchChannelId,
@@ -189,46 +188,55 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             return;
         }
 
+        if (subscriptionTypes is null || subscriptionTypes.Count == 0)
+        {
+            logger.LogWarning("Subscription type list is empty. Unable to subscribe to channel events");
+            return;
+        }
+        
         var authHeader = new AuthenticationHeaderValue("Bearer", accessToken);
         var headers = new Dictionary<string, string>
         {
             { "Client-Id", _botSettings.ClientId }
         };
 
-        var subscriptions = new List<(string, string)>
-        {
-            ("channel.subscribe", "1"),
-            ("channel.subscription.gift", "1"),
-            ("channel.subscription.message", "1"),
-            ("channel.channel_points_custom_reward_redemption.add", "1"),
-            ("channel.channel_points_custom_reward_redemption.update", "1"),
-            ("channel.ad_break.begin", "1"),
-            ("channel.ban", "1"),
-            ("channel.unban", "1"),
-            ("channel.bits.use", "1"),
-            ("channel.hype_train.begin", "1"),
-            ("channel.hype_train.progress", "1"),
-            ("channel.hype_train.end", "1"),
-            ("channel.follow", "2"),
-            ("channel.update", "2"),
-            ("stream.online", "1"),
-            ("stream.offline", "1")
-        };
+        // var subscriptions = new List<(string, string)>
+        // {
+        //     ("channel.subscribe", "1"),
+        //     ("channel.subscription.gift", "1"),
+        //     ("channel.subscription.message", "1"),
+        //     ("channel.channel_points_custom_reward_redemption.add", "1"),
+        //     ("channel.channel_points_custom_reward_redemption.update", "1"),
+        //     ("channel.ad_break.begin", "1"),
+        //     ("channel.ban", "1"),
+        //     ("channel.unban", "1"),
+        //     ("channel.bits.use", "1"),
+        //     ("channel.hype_train.begin", "1"),
+        //     ("channel.hype_train.progress", "1"),
+        //     ("channel.hype_train.end", "1"),
+        //     ("channel.follow", "2"),
+        //     ("channel.update", "2"),
+        //     ("stream.online", "1"),
+        //     ("stream.offline", "1")
+        // };
 
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in subscriptionTypes)
         {
+            if (string.IsNullOrEmpty(subscription.Name) || string.IsNullOrEmpty(subscription.Version))
+                continue;
+            
             var message = new Message
             {
                 Payload = new Payload
                 {
                     Subscription = new Subscription
                     {
-                        Type = subscription.Item1,
-                        Version = subscription.Item2,
+                        Type = subscription.Name,
+                        Version = subscription.Version,
                         Condition = new Condition
                         {
                             BroadcasterUserId = channel,
-                            ModeratorUserId = subscription.Item1.Equals("channel.follow") ? channel : null
+                            ModeratorUserId = subscription.Name.Equals("channel.follow") ? channel : null
                         },
                         Transport = new Transport
                         {

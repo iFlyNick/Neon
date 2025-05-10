@@ -1,7 +1,7 @@
 ﻿namespace Neon.TwitchService.Models;
 
-public enum SubscriptionType
+public class SubscriptionType
 {
-    Follow = 0,
-    Subscribe = 1
+    public string? Name { get; set; }
+    public string? Version { get; set; }
 }

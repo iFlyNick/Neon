@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Obs.BrowserSource.WebA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.TwitchChatbotService", "Neon.TwitchChatbotService\Neon.TwitchChatbotService.csproj", "{04508A57-C91D-43C5-A04C-4AE0004C8888}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Persistence.Worker", "Neon.Persistence.Worker\Neon.Persistence.Worker.csproj", "{2ED97C01-6FDA-4BCF-A7B6-779B3E169F4A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +77,10 @@ Global
 		{04508A57-C91D-43C5-A04C-4AE0004C8888}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04508A57-C91D-43C5-A04C-4AE0004C8888}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04508A57-C91D-43C5-A04C-4AE0004C8888}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ED97C01-6FDA-4BCF-A7B6-779B3E169F4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ED97C01-6FDA-4BCF-A7B6-779B3E169F4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ED97C01-6FDA-4BCF-A7B6-779B3E169F4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ED97C01-6FDA-4BCF-A7B6-779B3E169F4A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

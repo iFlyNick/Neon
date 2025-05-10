@@ -7,54 +7,76 @@ namespace Neon.Core.Data.Twitch;
 
 public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext context) : ITwitchDbService
 {
-    private readonly ILogger<TwitchDbService> _logger = logger;
-    private readonly NeonDbContext _context = context;
-
     public async Task<AppAccount?> GetAppAccountAsync(string? appName, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(appName))
         {
-            _logger.LogDebug("Invalid bot name request. BotName: {botName}", appName);
+            logger.LogDebug("Invalid bot name request. BotName: {botName}", appName);
             return null;
         }
 
-        if (_context.AppAccount is null)
-        {
-            _logger.LogError("AppAccount context is null!");
-            return null;
-        }
-
-        var resp = await _context.AppAccount.AsNoTracking().FirstOrDefaultAsync(s => s.AppName == appName, ct);
+        var resp = await context.AppAccount.AsNoTracking().FirstOrDefaultAsync(s => s.AppName == appName, ct);
 
         return resp;
     }
 
+    public async Task<List<SubscriptionType>?> GetDefaultSubscriptionsAsync(CancellationToken ct = default)
+    {
+        var defaultSubscriptionTypes = new List<string> { "channel.update", "stream.offline", "stream.online" };
+        
+        var resp = await context.SubscriptionType.AsNoTracking().Where(s => !string.IsNullOrEmpty(s.Name) && defaultSubscriptionTypes.Contains(s.Name)).ToListAsync(ct);
+
+        return resp;
+    }
+
+    public async Task<List<AuthorizationScope>?> GetAuthorizationScopesByNameAsync(List<string>? names, CancellationToken ct = default)
+    {
+        if (names is null || names.Count == 0)
+            return null;
+        
+        var resp = await context.AuthorizationScope.AsNoTracking().Where(s => !string.IsNullOrEmpty(s.Name) && names.Contains(s.Name)).ToListAsync(ct);
+
+        return resp;
+    }
+    
     public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterName(string? broadcasterName, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterName))
         {
-            _logger.LogDebug("Invalid broadcaster name request. BroadcasterName: {broadcasterName}", broadcasterName);
+            logger.LogDebug("Invalid broadcaster name request. BroadcasterName: {broadcasterName}", broadcasterName);
             return null;
         }
 
-        return await _context.TwitchAccount!.AsNoTracking().FirstOrDefaultAsync(s => !string.IsNullOrEmpty(s.LoginName) && s.LoginName.ToLower() == broadcasterName.ToLower(), ct);
+        var resp = await context.TwitchAccount
+            .Include(s => s.TwitchAccountAuth)
+            .Include(s => s.TwitchAccountScopes)
+                .ThenInclude(s => s.AuthorizationScope)
+                    .ThenInclude(s => s.AuthorizationScopeSubscriptionTypes)
+                        .ThenInclude(s => s.SubscriptionType)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => !string.IsNullOrEmpty(s.LoginName) && s.LoginName.ToLower() == broadcasterName.ToLower(), ct);
+
+        return resp;
     }
     
     public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterIdAsync(string? broadcasterId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId))
         {
-            _logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
+            logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
             return null;
         }
 
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
-            return null;
-        }
+        var resp = await context.TwitchAccount
+            .Include(s => s.TwitchAccountAuth)
+            .Include(s => s.TwitchAccountScopes)
+                .ThenInclude(s => s.AuthorizationScope)
+                    .ThenInclude(s => s.AuthorizationScopeSubscriptionTypes)
+                        .ThenInclude(s => s.SubscriptionType)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
 
-        return await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        return resp;
     }
     
     public async Task<int> UpdateAppAccountSettingsAsync(AppAccount? account, CancellationToken ct = default)
@@ -62,23 +84,17 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         if (account is null)
             return 0;
 
-        if (_context.AppAccount is null)
-        {
-            _logger.LogError("AppAccount context is null!");
-            return 0;
-        }
-
-        var dbAccount = await _context.AppAccount.FirstOrDefaultAsync(s => s.AppName == account.AppName, ct);
+        var dbAccount = await context.AppAccount.FirstOrDefaultAsync(s => s.AppName == account.AppName, ct);
 
         if (dbAccount is null)
         {
-            _logger.LogWarning("App account not found. AppName: {AppName}", account.AppName);
+            logger.LogWarning("App account not found. AppName: {AppName}", account.AppName);
             return 0;
         }
 
         dbAccount.AccessToken = account.AccessToken;
 
-        return await _context.SaveChangesAsync(ct);
+        return await context.SaveChangesAsync(ct);
     }
 
     public async Task<int> UpsertTwitchAccountAsync(TwitchAccount? account, CancellationToken ct = default)
@@ -86,21 +102,19 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         if (account is null)
             return 0;
 
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
-            return 0;
-        }
-
-        var dbAccount = await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == account.BroadcasterId, ct);
+        var dbAccount = 
+            await context.TwitchAccount
+                .Include(s => s.TwitchAccountAuth)
+                .Include(s => s.TwitchAccountScopes)
+                .FirstOrDefaultAsync(s => s.BroadcasterId == account.BroadcasterId, ct);
 
         if (dbAccount is null)
         {
-            _logger.LogDebug("Creating local twitch account for broadcaster: {broadcasterId}", account.BroadcasterId);
+            logger.LogDebug("Creating local twitch account for broadcaster: {broadcasterId}", account.BroadcasterId);
 
-            _context.TwitchAccount.Add(account);
+            context.TwitchAccount.Add(account);
 
-            return await _context.SaveChangesAsync(ct);
+            return await context.SaveChangesAsync(ct);
         }
 
         //update db account with new details. could be that they revoked and re-added, or simply changed details of their account and this was recalled by the app
@@ -112,72 +126,93 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         dbAccount.OfflineImageUrl = account.OfflineImageUrl;
         dbAccount.AccountCreatedDate = account.AccountCreatedDate;
         dbAccount.NeonAuthorizationDate = account.NeonAuthorizationDate;
+        dbAccount.NeonAuthorizationRevokeDate = account.NeonAuthorizationRevokeDate;
         dbAccount.IsAuthorizationRevoked = account.IsAuthorizationRevoked;
-        dbAccount.AuthorizationCode = account.AuthorizationCode;
-        dbAccount.AccessToken = account.AccessToken;
-        dbAccount.RefreshToken = account.RefreshToken;
-        dbAccount.AccessTokenRefreshDate = account.AccessTokenRefreshDate;
-        dbAccount.AuthorizationScopes = account.AuthorizationScopes;
+        
+        //update auth details
+        if (account.TwitchAccountAuth is not null)
+        {
+            if (dbAccount.TwitchAccountAuth is null)
+            {
+                dbAccount.TwitchAccountAuth = account.TwitchAccountAuth;
+            }
+            else
+            {
+                dbAccount.TwitchAccountAuth.AccessToken = account.TwitchAccountAuth.AccessToken;
+                dbAccount.TwitchAccountAuth.RefreshToken = account.TwitchAccountAuth.RefreshToken;
+                dbAccount.TwitchAccountAuth.LastRefreshDate = account.TwitchAccountAuth.LastRefreshDate;
+                dbAccount.TwitchAccountAuth.LastValidationDate = account.TwitchAccountAuth.LastValidationDate;
+            }
+        }
+        
+        //update scopes
+        if (account.TwitchAccountScopes is not null && account.TwitchAccountScopes.Count > 0)
+        {
+            var expectedScopes = account.TwitchAccountScopes.Select(s => s.AuthorizationScopeId).ToList();
+            var removeScopes = dbAccount.TwitchAccountScopes?.Where(s => !expectedScopes.Contains(s.AuthorizationScopeId)).ToList();
+            if (removeScopes is not null && removeScopes.Count > 0)
+                context.TwitchAccountScope.RemoveRange(removeScopes);
+            
+            foreach (var scope in account.TwitchAccountScopes)
+            {
+                var dbScope = dbAccount.TwitchAccountScopes?.FirstOrDefault(s => s.AuthorizationScopeId == scope.AuthorizationScopeId);
+                if (dbScope is null)
+                    dbAccount.TwitchAccountScopes?.Add(scope);
+            }
+        }
 
-        if (_context.ChangeTracker.HasChanges())
-            return await _context.SaveChangesAsync(ct);
+        if (context.Entry(dbAccount).State == EntityState.Unchanged)
+            return 0;
+        
+        context.TwitchAccount.Update(dbAccount);
+
+        if (context.ChangeTracker.HasChanges())
+            return await context.SaveChangesAsync(ct);
 
         return 0;
     }
 
     public async Task<List<TwitchAccount>?> GetSubscribedTwitchAccountsAsync(CancellationToken ct = default)
     {
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
-            return null;
-        }
-
         //TODO: remove hardcoded login name and make direct field for subscribed account for chat joining?
-        return await _context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "theneonbot").ToListAsync(ct);
+        return await context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "theneonbot").ToListAsync(ct);
     }
 
     public async Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId))
         {
-            _logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
-            return 0;
-        }
-        
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
+            logger.LogDebug("Invalid broadcaster id request. BroadcasterId: {broadcasterId}", broadcasterId);
             return 0;
         }
 
-        var account = await _context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        var account = await context.TwitchAccount.Include(s => s.TwitchAccountAuth).FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
 
         if (account is null)
         {
-            _logger.LogWarning("Twitch account not found. BroadcasterId: {broadcasterId}", broadcasterId);
+            logger.LogWarning("Twitch account not found. BroadcasterId: {broadcasterId}", broadcasterId);
+            return 0;
+        }
+        
+        if (account.TwitchAccountAuth is null)
+        {
+            logger.LogWarning("Twitch account auth not found. BroadcasterId: {broadcasterId}", broadcasterId);
             return 0;
         }
 
-        account.AccessToken = accessToken;
-        account.AccessTokenRefreshDate = DateTime.UtcNow;
+        account.TwitchAccountAuth.AccessToken = accessToken;
+        account.TwitchAccountAuth.LastRefreshDate = DateTime.UtcNow;
 
-        return await _context.SaveChangesAsync(ct);
+        return await context.SaveChangesAsync(ct);
     }
 
     public async Task<List<TwitchAccount>?> GetAllSubscribedChannelAccounts(CancellationToken ct = default)
     {
-        if (_context.TwitchAccount is null)
-        {
-            _logger.LogError("TwitchAccount context is null!");
-            return null;
-        }
+        var accounts = await context.TwitchAccount.AsNoTracking().Where(s => !string.IsNullOrEmpty(s.LoginName) && s.LoginName.ToLower() != "theneonbot" && !(s.IsAuthorizationRevoked ?? false)).ToListAsync(ct);
         
-        var accounts = await _context.TwitchAccount.AsNoTracking().Where(s => !s.IsAuthorizationRevoked ?? false).ToListAsync(ct);
-        
-        if (accounts is null || accounts.Count == 0)
+        if (accounts.Count == 0)
         {
-            _logger.LogWarning("No subscribed twitch accounts found.");
+            logger.LogWarning("No subscribed twitch accounts found.");
             return null;
         }
 

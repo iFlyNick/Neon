@@ -109,7 +109,7 @@ Project Neon
 		- no auth
 		
 - example event sub auth url for TheNeonBot to read/write from chats
-	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=user%3Abot%20user%3Awrite%3Achat%20user%3Aread%3Achat%20bits%3Aread%20channel%3Amoderate%20moderator%3Aread%3Afollowers%20channel%3Aread%3Asubscriptions%20channel%3Aread%3Aredemptions%20channel%3Aread%3Aads%20channel%3Aread%3Ahype_train%20channel%3Abot
+	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=user%3Abot%20user%3Awrite%3Achat%20user%3Aread%3Achat
 
 - example event sub auth url
 	- https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=https://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=bits%3Aread%20channel%3Amoderate%20moderator%3Aread%3Afollowers%20channel%3Aread%3Asubscriptions%20channel%3Aread%3Aredemptions%20channel%3Aread%3Aads%20channel%3Aread%3Ahype_train%20channel%3Abot
