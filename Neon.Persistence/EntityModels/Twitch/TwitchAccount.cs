@@ -17,12 +17,9 @@ public class TwitchAccount : BaseModel
     public DateTime? NeonAuthorizationDate { get; set; }
     public DateTime? NeonAuthorizationRevokeDate { get; set; }
     public bool? IsAuthorizationRevoked { get; set; }
-    public string? AuthorizationCode { get; set; }
-    public string? AccessToken { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? AccessTokenRefreshDate { get; set; }
-    public string? AuthorizationScopes { get; set; }
-    public string? WebSocketChatUrl { get; set; }
+    
+    public TwitchAccountAuth? TwitchAccountAuth { get; set; }
+    public ICollection<TwitchAccountScope>? TwitchAccountScopes { get; set; }
 }
 
 public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount>
@@ -36,9 +33,12 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
         builder.HasKey(s => s.TwitchAccountId);
 
         //indexes
-
+        builder.HasIndex(s => s.BroadcasterId);
+        builder.HasIndex(s => s.LoginName);
 
         //relationships
+        builder.HasOne(s => s.TwitchAccountAuth).WithOne(s => s.TwitchAccount)
+            .HasForeignKey<TwitchAccountAuth>(s => s.TwitchAccountId);
 
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();
@@ -57,11 +57,7 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
         builder.Property(s => s.OfflineImageUrl).HasMaxLength(500);
         builder.Property(s => s.AccountCreatedDate).IsRequired();
         builder.Property(s => s.NeonAuthorizationDate);
-        builder.Property(s => s.AuthorizationCode).HasMaxLength(50);
-        builder.Property(s => s.AccessToken).HasMaxLength(50);
-        builder.Property(s => s.RefreshToken).HasMaxLength(50);
-        builder.Property(s => s.AccessTokenRefreshDate);
-        builder.Property(s => s.AuthorizationScopes).HasMaxLength(500);
-        builder.Property(s => s.WebSocketChatUrl).HasMaxLength(200);
+        builder.Property(s => s.NeonAuthorizationRevokeDate);
+        builder.Property(s => s.IsAuthorizationRevoked).HasDefaultValue(false);
     }
 }
