@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Neon.Core.Models.Twitch.EventSub;
 using Neon.Persistence.EntityModels.Twitch;
 using Neon.Persistence.NeonContext;
 
@@ -21,7 +20,7 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         return resp;
     }
 
-    public async Task<List<SubscriptionType>?> GetSubscriptionsAsync(CancellationToken ct = default)
+    public async Task<List<SubscriptionType>?> GetDefaultSubscriptionsAsync(CancellationToken ct = default)
     {
         var defaultSubscriptionTypes = new List<string> { "channel.update", "stream.offline", "stream.online" };
         
@@ -30,6 +29,16 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         return resp;
     }
 
+    public async Task<List<AuthorizationScope>?> GetAuthorizationScopesByNameAsync(List<string>? names, CancellationToken ct = default)
+    {
+        if (names is null || names.Count == 0)
+            return null;
+        
+        var resp = await context.AuthorizationScope.AsNoTracking().Where(s => !string.IsNullOrEmpty(s.Name) && names.Contains(s.Name)).ToListAsync(ct);
+
+        return resp;
+    }
+    
     public async Task<TwitchAccount?> GetTwitchAccountByBroadcasterName(string? broadcasterName, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterName))
@@ -93,7 +102,11 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         if (account is null)
             return 0;
 
-        var dbAccount = await context.TwitchAccount.FirstOrDefaultAsync(s => s.BroadcasterId == account.BroadcasterId, ct);
+        var dbAccount = 
+            await context.TwitchAccount
+                .Include(s => s.TwitchAccountAuth)
+                .Include(s => s.TwitchAccountScopes)
+                .FirstOrDefaultAsync(s => s.BroadcasterId == account.BroadcasterId, ct);
 
         if (dbAccount is null)
         {
@@ -113,7 +126,45 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         dbAccount.OfflineImageUrl = account.OfflineImageUrl;
         dbAccount.AccountCreatedDate = account.AccountCreatedDate;
         dbAccount.NeonAuthorizationDate = account.NeonAuthorizationDate;
+        dbAccount.NeonAuthorizationRevokeDate = account.NeonAuthorizationRevokeDate;
         dbAccount.IsAuthorizationRevoked = account.IsAuthorizationRevoked;
+        
+        //update auth details
+        if (account.TwitchAccountAuth is not null)
+        {
+            if (dbAccount.TwitchAccountAuth is null)
+            {
+                dbAccount.TwitchAccountAuth = account.TwitchAccountAuth;
+            }
+            else
+            {
+                dbAccount.TwitchAccountAuth.AccessToken = account.TwitchAccountAuth.AccessToken;
+                dbAccount.TwitchAccountAuth.RefreshToken = account.TwitchAccountAuth.RefreshToken;
+                dbAccount.TwitchAccountAuth.LastRefreshDate = account.TwitchAccountAuth.LastRefreshDate;
+                dbAccount.TwitchAccountAuth.LastValidationDate = account.TwitchAccountAuth.LastValidationDate;
+            }
+        }
+        
+        //update scopes
+        if (account.TwitchAccountScopes is not null && account.TwitchAccountScopes.Count > 0)
+        {
+            var expectedScopes = account.TwitchAccountScopes.Select(s => s.AuthorizationScopeId).ToList();
+            var removeScopes = dbAccount.TwitchAccountScopes?.Where(s => !expectedScopes.Contains(s.AuthorizationScopeId)).ToList();
+            if (removeScopes is not null && removeScopes.Count > 0)
+                context.TwitchAccountScope.RemoveRange(removeScopes);
+            
+            foreach (var scope in account.TwitchAccountScopes)
+            {
+                var dbScope = dbAccount.TwitchAccountScopes?.FirstOrDefault(s => s.AuthorizationScopeId == scope.AuthorizationScopeId);
+                if (dbScope is null)
+                    dbAccount.TwitchAccountScopes?.Add(scope);
+            }
+        }
+
+        if (context.Entry(dbAccount).State == EntityState.Unchanged)
+            return 0;
+        
+        context.TwitchAccount.Update(dbAccount);
 
         if (context.ChangeTracker.HasChanges())
             return await context.SaveChangesAsync(ct);

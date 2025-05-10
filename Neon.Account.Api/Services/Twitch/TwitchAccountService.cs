@@ -16,7 +16,22 @@ public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchD
         }
 
         var curDate = DateTime.UtcNow;
-
+        
+        //generate twitch account auth object
+        var dbAuth = new TwitchAccountAuth
+        {
+            AuthorizationCode = userAuth.AuthenticationResponse.Code,
+            AccessToken = userAuth.OAuthResponse.AccessToken,
+            RefreshToken = userAuth.OAuthResponse.RefreshToken,
+            LastRefreshDate = curDate,
+            LastValidationDate = curDate
+        };
+        
+        //generate twitch account scope
+        var grantedScopes = userAuth.OAuthValidationResponse.Scopes;
+        var dbScopes = await GetTwitchAccountScopes(grantedScopes, ct);
+        
+        //put it all together to generate the full twitch account object for db persist
         var dbAccount = new TwitchAccount
         {
             BroadcasterId = userAuth.TwitchUserAccount.BroadcasterId,
@@ -29,13 +44,39 @@ public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchD
             AccountCreatedDate = userAuth.TwitchUserAccount.CreatedAt,
             NeonAuthorizationDate = curDate,
             IsAuthorizationRevoked = false,
-            AuthorizationCode = userAuth.AuthenticationResponse.Code,
-            AccessToken = userAuth.OAuthResponse.AccessToken,
-            RefreshToken = userAuth.OAuthResponse.RefreshToken,
-            AccessTokenRefreshDate = curDate,
-            AuthorizationScopes = (userAuth.OAuthValidationResponse.Scopes is null || userAuth.OAuthValidationResponse.Scopes.Count == 0) ? "" : string.Join(",", userAuth.OAuthValidationResponse.Scopes)
+            TwitchAccountAuth = dbAuth,
+            TwitchAccountScopes = dbScopes
+            
+            // AuthorizationScopes = (userAuth.OAuthValidationResponse.Scopes is null || userAuth.OAuthValidationResponse.Scopes.Count == 0) ? "" : string.Join(",", userAuth.OAuthValidationResponse.Scopes)
         };
 
         await twitchDbService.UpsertTwitchAccountAsync(dbAccount, ct);
+    }
+
+    private async Task<List<TwitchAccountScope>?> GetTwitchAccountScopes(List<string>? grantedScopes, CancellationToken ct = default)
+    {
+        var dbAuthScopes = await twitchDbService.GetAuthorizationScopesByNameAsync(grantedScopes, ct);
+
+        if (dbAuthScopes is null || dbAuthScopes.Count == 0)
+        {
+            logger.LogWarning("No auth scopes found in db for account modification!");
+            return null;
+        }
+        
+        var dbScopes = new List<TwitchAccountScope>();
+        foreach (var scope in dbAuthScopes)
+        {
+            var tVal = new TwitchAccountScope
+            {
+                AuthorizationScopeId = scope.AuthorizationScopeId
+            };
+            
+            dbScopes.Add(tVal);
+        }
+
+        if (dbScopes.Count == 0)
+            return null;
+        
+        return dbScopes;
     }
 }

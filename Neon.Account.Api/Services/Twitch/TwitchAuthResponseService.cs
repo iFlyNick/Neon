@@ -7,17 +7,11 @@ namespace Neon.Account.Api.Services.Twitch;
 
 public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger, IAppTokenService appTokenService, IUserTokenService userTokenService, ITwitchAccountService twitchAccountService, IHelixService helixService) : ITwitchAuthResponseService
 {
-    private readonly ILogger<TwitchAuthResponseService> _logger = logger;
-    private readonly IAppTokenService _appTokenService = appTokenService;
-    private readonly IUserTokenService _userTokenService = userTokenService;
-    private readonly ITwitchAccountService _twitchAccountService = twitchAccountService;
-    private readonly IHelixService _helixService = helixService;
-
     public async Task HandleResponseAsync(AuthenticationResponse? response, CancellationToken ct = default)
     {
         if (response is null)
         {
-            _logger.LogError("Twitch Authentication response received with no data!");
+            logger.LogError("Twitch Authentication response received with no data!");
             return;
         }
         
@@ -30,31 +24,31 @@ public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger
     private async Task HandleAuthSuccessRequest(AuthenticationResponse response, CancellationToken ct = default)
     {
         //at this point we have a code, but don't have any details about who it was. take the token and call the validate method against the oauth service to get a bit larger picture next
-        var appAuth = await _appTokenService.GetAppAccountAuthAsync(ct);
+        var appAuth = await appTokenService.GetAppAccountAuthAsync(ct);
 
         if (appAuth is null || string.IsNullOrEmpty(appAuth.AccessToken))
         {
-            _logger.LogCritical("Failed to fetch app account from database or failed to get access token!");
+            logger.LogCritical("Failed to fetch app account from database or failed to get access token!");
             return;
         }
 
-        var userAuth = await _userTokenService.GetUserAccountAuthAsync(response.Code, appAuth.AccessToken, ct);
+        var userAuth = await userTokenService.GetUserAccountAuthAsync(response.Code, appAuth.AccessToken, ct);
 
         if (userAuth is null || string.IsNullOrEmpty(userAuth.AccessToken))
         {
-            _logger.LogError("Failed to get user auth token from twitch!");
+            logger.LogError("Failed to get user auth token from twitch!");
             return;
         }
 
-        var userAuthValidation = await _userTokenService.ValidateOAuthToken(userAuth.AccessToken, ct);
+        var userAuthValidation = await userTokenService.ValidateOAuthToken(userAuth.AccessToken, ct);
 
         if (userAuthValidation is null)
         {
-            _logger.LogError("User auth token validation failed! Unable to create local twitch account representation!");
+            logger.LogError("User auth token validation failed! Unable to create local twitch account representation!");
             return;
         }
 
-        var twitchUserDetails = await _helixService.GetUserAccountDetailsAsync(userAuthValidation.UserId, userAuth.AccessToken, ct);
+        var twitchUserDetails = await helixService.GetUserAccountDetailsAsync(userAuthValidation.UserId, userAuth.AccessToken, ct);
 
         var twitchUserAuth = new TwitchUserAccountAuth
         {
@@ -64,13 +58,13 @@ public class TwitchAuthResponseService(ILogger<TwitchAuthResponseService> logger
             TwitchUserAccount = twitchUserDetails
         };
 
-        await _twitchAccountService.CreateTwitchAccountFromOAuthAsync(twitchUserAuth, ct);
+        await twitchAccountService.CreateTwitchAccountFromOAuthAsync(twitchUserAuth, ct);
     }
 
     private void HandleAuthErrorRequest(AuthenticationResponse response)
     {
         //log for now, could take action later
-        _logger.LogError("Error: {Error}, Description: {ErrorDescription}", response.Error, response.ErrorDescription);
+        logger.LogError("Error: {Error}, Description: {ErrorDescription}", response.Error, response.ErrorDescription);
         return;
     }
 }

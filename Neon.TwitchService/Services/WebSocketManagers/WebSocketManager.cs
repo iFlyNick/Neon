@@ -103,7 +103,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         
         var subscriptions = new List<SubscriptionType>();
         
-        var defaultSubscriptions = await twitchDbService.GetSubscriptionsAsync(ct);
+        var defaultSubscriptions = await twitchDbService.GetDefaultSubscriptionsAsync(ct);
 
         defaultSubscriptions?.ForEach(s =>
         {
