@@ -20,7 +20,6 @@ public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchD
         //generate twitch account auth object
         var dbAuth = new TwitchAccountAuth
         {
-            AuthorizationCode = userAuth.AuthenticationResponse.Code,
             AccessToken = userAuth.OAuthResponse.AccessToken,
             RefreshToken = userAuth.OAuthResponse.RefreshToken,
             LastRefreshDate = curDate,

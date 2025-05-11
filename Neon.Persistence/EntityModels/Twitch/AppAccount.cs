@@ -8,8 +8,10 @@ public class AppAccount : BaseModel
     public Guid? AppAccountId { get; set; }
     public string? AppName { get; set; }
     public string? ClientId { get; set; }
-    public string? ClientSecret { get; set; }
-    public string? AccessToken { get; set; }
+    public string? ClientSecret { get; set; } //encrypted
+    public string? ClientSecretIv { get; set; }
+    public string? AccessToken { get; set; } //encrypted
+    public string? AccessTokenIv { get; set; }
     public string? RedirectUri { get; set; }
 }
 
@@ -39,7 +41,9 @@ public class AppAccountConfiguration : IEntityTypeConfiguration<AppAccount>
         builder.Property(s => s.AppName).IsRequired().HasMaxLength(100);
         builder.Property(s => s.ClientId).IsRequired().HasMaxLength(255);
         builder.Property(s => s.ClientSecret).IsRequired().HasMaxLength(255);
+        builder.Property(s => s.ClientSecretIv).IsRequired().HasMaxLength(255);
         builder.Property(s => s.AccessToken).IsRequired().HasMaxLength(255);
+        builder.Property(s => s.AccessTokenIv).IsRequired().HasMaxLength(255);
         builder.Property(s => s.RedirectUri).IsRequired().HasMaxLength(2000);
     }
 }

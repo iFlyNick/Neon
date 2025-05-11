@@ -1,11 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Neon.Core.Services.Encryption;
 using Neon.Persistence.EntityModels.Twitch;
 using Neon.Persistence.NeonContext;
 
 namespace Neon.Core.Data.Twitch;
 
-public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext context) : ITwitchDbService
+public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext context, IEncryptionService encryptionService) : ITwitchDbService
 {
     public async Task<AppAccount?> GetAppAccountAsync(string? appName, CancellationToken ct = default)
     {
@@ -17,6 +18,12 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
 
         var resp = await context.AppAccount.AsNoTracking().FirstOrDefaultAsync(s => s.AppName == appName, ct);
 
+        if (resp is null)
+            return null;
+        
+        resp.ClientSecret = encryptionService.Decrypt(resp.ClientSecret, resp.ClientSecretIv);
+        resp.AccessToken = encryptionService.Decrypt(resp.AccessToken, resp.AccessTokenIv);
+        
         return resp;
     }
 
@@ -56,6 +63,15 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             .AsNoTracking()
             .FirstOrDefaultAsync(s => !string.IsNullOrEmpty(s.LoginName) && s.LoginName.ToLower() == broadcasterName.ToLower(), ct);
 
+        if (resp is null)
+            return null;
+
+        if (resp.TwitchAccountAuth is not null)
+        {
+            resp.TwitchAccountAuth.AccessToken = encryptionService.Decrypt(resp.TwitchAccountAuth.AccessToken, resp.TwitchAccountAuth.AccessTokenIv);
+            resp.TwitchAccountAuth.RefreshToken = encryptionService.Decrypt(resp.TwitchAccountAuth.RefreshToken, resp.TwitchAccountAuth.RefreshTokenIv);
+        }
+        
         return resp;
     }
     
@@ -76,6 +92,15 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
 
+        if (resp is null)
+            return null;
+
+        if (resp.TwitchAccountAuth is not null)
+        {
+            resp.TwitchAccountAuth.AccessToken = encryptionService.Decrypt(resp.TwitchAccountAuth.AccessToken, resp.TwitchAccountAuth.AccessTokenIv);
+            resp.TwitchAccountAuth.RefreshToken = encryptionService.Decrypt(resp.TwitchAccountAuth.RefreshToken, resp.TwitchAccountAuth.RefreshTokenIv);
+        }
+        
         return resp;
     }
     
@@ -92,7 +117,13 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             return 0;
         }
 
-        dbAccount.AccessToken = account.AccessToken;
+        var clientSecretEncryption = encryptionService.Encrypt(account.ClientSecret);
+        dbAccount.ClientSecret = clientSecretEncryption.Item1;
+        dbAccount.ClientSecretIv = clientSecretEncryption.Item2;
+        
+        var accessTokenEncryption = encryptionService.Encrypt(account.AccessToken);
+        dbAccount.AccessToken = accessTokenEncryption.Item1;
+        dbAccount.AccessTokenIv = accessTokenEncryption.Item2;
 
         return await context.SaveChangesAsync(ct);
     }
@@ -102,6 +133,17 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         if (account is null)
             return 0;
 
+        if (account.TwitchAccountAuth is not null)
+        {
+            var accessTokenEncryption = encryptionService.Encrypt(account.TwitchAccountAuth.AccessToken);
+            account.TwitchAccountAuth.AccessToken = accessTokenEncryption.Item1;
+            account.TwitchAccountAuth.AccessTokenIv = accessTokenEncryption.Item2;
+            
+            var refreshTokenEncryption = encryptionService.Encrypt(account.TwitchAccountAuth.RefreshToken);
+            account.TwitchAccountAuth.RefreshToken = refreshTokenEncryption.Item1;
+            account.TwitchAccountAuth.RefreshTokenIv = refreshTokenEncryption.Item2;
+        }
+        
         var dbAccount = 
             await context.TwitchAccount
                 .Include(s => s.TwitchAccountAuth)
@@ -111,7 +153,7 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         if (dbAccount is null)
         {
             logger.LogDebug("Creating local twitch account for broadcaster: {broadcasterId}", account.BroadcasterId);
-
+            
             context.TwitchAccount.Add(account);
 
             return await context.SaveChangesAsync(ct);
@@ -139,7 +181,9 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             else
             {
                 dbAccount.TwitchAccountAuth.AccessToken = account.TwitchAccountAuth.AccessToken;
+                dbAccount.TwitchAccountAuth.AccessTokenIv = account.TwitchAccountAuth.AccessTokenIv;
                 dbAccount.TwitchAccountAuth.RefreshToken = account.TwitchAccountAuth.RefreshToken;
+                dbAccount.TwitchAccountAuth.RefreshTokenIv = account.TwitchAccountAuth.RefreshTokenIv;
                 dbAccount.TwitchAccountAuth.LastRefreshDate = account.TwitchAccountAuth.LastRefreshDate;
                 dbAccount.TwitchAccountAuth.LastValidationDate = account.TwitchAccountAuth.LastValidationDate;
             }
@@ -172,12 +216,6 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         return 0;
     }
 
-    public async Task<List<TwitchAccount>?> GetSubscribedTwitchAccountsAsync(CancellationToken ct = default)
-    {
-        //TODO: remove hardcoded login name and make direct field for subscribed account for chat joining?
-        return await context.TwitchAccount.AsNoTracking().Where(s => !(s.IsAuthorizationRevoked ?? true) && s.LoginName != "theneonbot").ToListAsync(ct);
-    }
-
     public async Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId))
@@ -199,8 +237,11 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
             logger.LogWarning("Twitch account auth not found. BroadcasterId: {broadcasterId}", broadcasterId);
             return 0;
         }
-
-        account.TwitchAccountAuth.AccessToken = accessToken;
+        
+        var accessTokenEncryption = encryptionService.Encrypt(accessToken);
+        account.TwitchAccountAuth.AccessToken = accessTokenEncryption.Item1;
+        account.TwitchAccountAuth.AccessTokenIv = accessTokenEncryption.Item2;
+        
         account.TwitchAccountAuth.LastRefreshDate = DateTime.UtcNow;
 
         return await context.SaveChangesAsync(ct);

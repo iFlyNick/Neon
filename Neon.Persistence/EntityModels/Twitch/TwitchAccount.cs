@@ -37,8 +37,8 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
         builder.HasIndex(s => s.LoginName);
 
         //relationships
-        builder.HasOne(s => s.TwitchAccountAuth).WithOne(s => s.TwitchAccount)
-            .HasForeignKey<TwitchAccountAuth>(s => s.TwitchAccountId);
+        builder.HasOne(s => s.TwitchAccountAuth).WithOne(s => s.TwitchAccount).HasForeignKey<TwitchAccountAuth>(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(s => s.TwitchAccountScopes).WithOne(s => s.TwitchAccount).HasForeignKey(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
 
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();

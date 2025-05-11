@@ -1,19 +1,68 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Neon.Core.Models;
+using Neon.Core.Services.Encryption;
+using Neon.Core.Services.Twitch.Authentication;
 using Neon.Persistence.EntityModels.Twitch;
 using Neon.Persistence.NeonContext;
 
-namespace Neon.Persistence.Scripts;
+namespace Neon.Persistence.Worker.Scripts;
 
-public class DataGenerator(ILogger<DataGenerator> logger, NeonDbContext neonContext) : IDataGenerator
+public class DataGenerator(ILogger<DataGenerator> logger, NeonDbContext neonContext, IEncryptionService encryptionService, IOAuthService oAuthService, IOptions<AppAccountSettings> appAccountSettings) : IDataGenerator
 {
+    private readonly AppAccountSettings _appAccountSettings = appAccountSettings.Value;
+    
     public async Task PreloadDbData(CancellationToken ct = default)
     {
         //TODO: preload app account for true startup for given user?
+        await PreloadAppAccount(ct);
+        
         await PreloadSubscriptionTypes(ct);
         await PreloadAuthorizationScopes(ct);
         
         await PreloadAuthorizationScopeSubscriptionTypes(ct);
+    }
+
+    private async Task PreloadAppAccount(CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(_appAccountSettings.AppName) || string.IsNullOrEmpty(_appAccountSettings.ClientId) ||
+            string.IsNullOrEmpty(_appAccountSettings.ClientSecret) || string.IsNullOrEmpty(_appAccountSettings.RedirectUri))
+        {
+            logger.LogCritical("App settings is missing app name, client id, client secret, or redirect uri!");
+            throw new Exception("App settings is missing app name, client id, client secret, or redirect uri!");
+        }
+
+        var appAccount = await neonContext.AppAccount.FirstOrDefaultAsync(s => s.AppName == _appAccountSettings.AppName, ct);
+        if (appAccount is null)
+        {
+            logger.LogDebug("Fetching app auth token from twitch.");
+            var appAuth = await oAuthService.GetAppAuthToken(_appAccountSettings.ClientId, _appAccountSettings.ClientSecret, ct);
+
+            if (appAuth is null || string.IsNullOrEmpty(appAuth.AccessToken))
+            {
+                logger.LogError("Failed to get app auth token from twitch!");
+                throw new Exception("Failed to get app auth token from twitch!");
+            }
+            
+            var clientEncryptionSettings = encryptionService.Encrypt(_appAccountSettings.ClientSecret);
+            var accessEncryptionSettings = encryptionService.Encrypt(appAuth.AccessToken);
+            
+            appAccount = new AppAccount
+            {
+                AppName = _appAccountSettings.AppName,
+                ClientId = _appAccountSettings.ClientId,
+                ClientSecret = clientEncryptionSettings.Item1,
+                ClientSecretIv = clientEncryptionSettings.Item2,
+                AccessToken = accessEncryptionSettings.Item1,
+                AccessTokenIv = accessEncryptionSettings.Item2,
+                RedirectUri = _appAccountSettings.RedirectUri
+            };
+            
+            neonContext.AppAccount.Add(appAccount);
+        }
+        
+        if (neonContext.ChangeTracker.HasChanges())
+            await neonContext.SaveChangesAsync(ct);
     }
     
     private async Task PreloadSubscriptionTypes(CancellationToken ct = default)

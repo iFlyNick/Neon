@@ -1,4 +1,4 @@
-﻿namespace Neon.Persistence.Scripts;
+﻿namespace Neon.Persistence.Worker.Scripts;
 
 public interface IDataGenerator
 {

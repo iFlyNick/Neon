@@ -36,6 +36,12 @@ namespace Neon.Persistence.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("access_token");
 
+                    b.Property<string>("AccessTokenIv")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("access_token_iv");
+
                     b.Property<string>("AppName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -53,6 +59,12 @@ namespace Neon.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("client_secret");
+
+                    b.Property<string>("ClientSecretIv")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("client_secret_iv");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -350,15 +362,15 @@ namespace Neon.Persistence.Migrations
 
                     b.Property<string>("AccessToken")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("access_token");
 
-                    b.Property<string>("AuthorizationCode")
+                    b.Property<string>("AccessTokenIv")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("authorization_code");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("access_token_iv");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -397,9 +409,15 @@ namespace Neon.Persistence.Migrations
 
                     b.Property<string>("RefreshToken")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("refresh_token");
+
+                    b.Property<string>("RefreshTokenIv")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("refresh_token_iv");
 
                     b.Property<Guid>("TwitchAccountId")
                         .HasColumnType("uuid")

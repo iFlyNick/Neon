@@ -10,6 +10,7 @@ services:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - BaseKafkaConfig__BootstrapServers=kafka:29092
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     networks:
       - ${DEFAULT_NETWORK}
 
@@ -22,6 +23,7 @@ services:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - ConnectionStrings__Redis=redis:6379
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     ports:
       - "${EMOTE_SERVICE_EXTERNAL_PORT}:8080"
     networks:
@@ -38,6 +40,7 @@ services:
       - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - AppBaseConfig__KafkaBootstrapServers=kafka:29092
       - AppBaseConfig__EmoteApi=http://emote-service:8080
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     depends_on:
       emote-service:
         condition: service_started
@@ -52,6 +55,7 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - BaseKafkaConfig__BootstrapServers=kafka:29092
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     ports:
       - "${OBS_SERVICE_EXTERNAL_PORT}:8080"
     networks:
@@ -66,6 +70,7 @@ services:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - AppBaseConfig__KafkaBootstrapServers=kafka:29092
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     networks:
       - ${DEFAULT_NETWORK}
 
