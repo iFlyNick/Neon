@@ -23,6 +23,7 @@
 
 *.env
 !*/sample.env
+*/secrets.json
 
 [Ll]ogs/
 
