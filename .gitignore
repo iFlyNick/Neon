@@ -21,6 +21,9 @@
 /src/Neon.Twitch/bin/Debug/net9.0
 /src/Neon.Twitch/obj
 
+.env
+!sample.env
+
 [Ll]ogs/
 
 ## Ignore Visual Studio temporary files, build results, and

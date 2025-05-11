@@ -46,8 +46,6 @@ public class TwitchAccountService(ILogger<TwitchAccountService> logger, ITwitchD
             IsAuthorizationRevoked = false,
             TwitchAccountAuth = dbAuth,
             TwitchAccountScopes = dbScopes
-            
-            // AuthorizationScopes = (userAuth.OAuthValidationResponse.Scopes is null || userAuth.OAuthValidationResponse.Scopes.Count == 0) ? "" : string.Join(",", userAuth.OAuthValidationResponse.Scopes)
         };
 
         await twitchDbService.UpsertTwitchAccountAsync(dbAccount, ct);

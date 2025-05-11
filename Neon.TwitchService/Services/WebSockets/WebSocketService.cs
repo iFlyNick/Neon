@@ -200,26 +200,6 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId }
         };
 
-        // var subscriptions = new List<(string, string)>
-        // {
-        //     ("channel.subscribe", "1"),
-        //     ("channel.subscription.gift", "1"),
-        //     ("channel.subscription.message", "1"),
-        //     ("channel.channel_points_custom_reward_redemption.add", "1"),
-        //     ("channel.channel_points_custom_reward_redemption.update", "1"),
-        //     ("channel.ad_break.begin", "1"),
-        //     ("channel.ban", "1"),
-        //     ("channel.unban", "1"),
-        //     ("channel.bits.use", "1"),
-        //     ("channel.hype_train.begin", "1"),
-        //     ("channel.hype_train.progress", "1"),
-        //     ("channel.hype_train.end", "1"),
-        //     ("channel.follow", "2"),
-        //     ("channel.update", "2"),
-        //     ("stream.online", "1"),
-        //     ("stream.offline", "1")
-        // };
-
         foreach (var subscription in subscriptionTypes)
         {
             if (string.IsNullOrEmpty(subscription.Name) || string.IsNullOrEmpty(subscription.Version))
