@@ -2,6 +2,8 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
+command_ideas.txt
+
 /.idea/.idea.Neon/.idea
 /.vs
 /Neon.Account.Api/bin/Debug/net9.0
