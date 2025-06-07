@@ -93,7 +93,18 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             //update db with new access token
             _ = await twitchDbService.UpsertTwitchAccountAsync(broadcasterAccount, ct);
         }
+        
+        logger.LogDebug("User auth token is now valid for account: {broadcasterName}", broadcasterName);
 
+        //reset the broadcaster account to ensure we have the latest data and decrypted access token info
+        broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
+        
+        if (broadcasterAccount is null || broadcasterAccount.TwitchAccountAuth is null)
+        {
+            logger.LogError("Broadcaster account or auth is null for account: {broadcasterName}", broadcasterName);
+            throw new Exception("Broadcaster account is null or broadcaster account auth is null!");
+        }
+        
         var dbSubscriptions =
             broadcasterAccount.TwitchAccountScopes?.Where(s => s.AuthorizationScope is not null)
                 .Select(s => s.AuthorizationScope!)

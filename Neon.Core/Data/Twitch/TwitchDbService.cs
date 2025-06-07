@@ -204,14 +204,17 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
                     dbAccount.TwitchAccountScopes?.Add(scope);
             }
         }
-
-        if (context.Entry(dbAccount).State == EntityState.Unchanged)
-            return 0;
         
         context.TwitchAccount.Update(dbAccount);
 
+        if (context.Entry(dbAccount).State == EntityState.Unchanged)
+            return 0;
+
         if (context.ChangeTracker.HasChanges())
+        {
+            logger.LogDebug("Updating local twitch account for broadcaster: {broadcasterId}", account.BroadcasterId);
             return await context.SaveChangesAsync(ct);
+        }
 
         return 0;
     }

@@ -205,6 +205,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             if (string.IsNullOrEmpty(subscription.Name) || string.IsNullOrEmpty(subscription.Version))
                 continue;
             
+            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, channel);
+            
             var message = new Message
             {
                 Payload = new Payload
@@ -216,7 +218,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
                         Condition = new Condition
                         {
                             BroadcasterUserId = channel,
-                            ModeratorUserId = subscription.Name.Equals("channel.follow") ? channel : null
+                            ModeratorUserId = subscription.Name.Equals("channel.follow") ? channel : null,
+                            UserId = subscription.Name.StartsWith("channel.chat") ? channel : null
                         },
                         Transport = new Transport
                         {
@@ -235,7 +238,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             if (resp is null || !resp.IsSuccessStatusCode)
             {
-                logger.LogDebug("Failed to subscribe to channel events. Response: {response}", resp?.StatusCode);
+                var tRespContent = resp is null ? "no response" : await resp.Content.ReadAsStringAsync(ct);
+                logger.LogDebug("Failed to subscribe to channel events. StatusCode: {code} | Response: {response}", resp?.StatusCode, tRespContent);
                 return;
             }
             
