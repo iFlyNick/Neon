@@ -40,6 +40,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
             "channel.follow" => "follow",
             "channel.subscription.gift" => "gift-sub",
             "channel.subscribe" => "sub",
+            "channel.subscription.message" => "resub",
             "channel.ad_break.begin" => "ad-begin",
             "channel.channel_points_custom_reward_redemption.add" => "reward-redeem",
             _ => null
@@ -67,6 +68,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
             "follow" => $"{message?.Payload?.Event?.UserName} just followed!",
             "gift-sub" => giftSubMessage,
             "sub" => $"{message?.Payload?.Event?.UserName} just subscribed at tier {subTierType}!",
+            "resub" => $"{message?.Payload?.Event?.UserName} just resubscribed at tier {subTierType}!",
             "ad-begin" => $"An ad break has started. Ad length {message?.Payload?.Event?.DurationSeconds} seconds. We'll be back soon!",
             "reward-redeem" => $"{message?.Payload?.Event?.UserName} redeemed {message?.Payload?.Event?.Reward?.Title}!",
             _ => null
