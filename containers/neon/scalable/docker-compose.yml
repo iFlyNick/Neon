@@ -73,6 +73,20 @@ services:
       - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     networks:
       - ${DEFAULT_NETWORK}
+  
+  twitch-account-api:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.Account.Api/Dockerfile
+    container_name: twitch-account-api
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
+    ports:
+      - "${TWITCH_ACCOUNT_API_EXTERNAL_PORT}:8080"
+    networks:
+      - ${DEFAULT_NETWORK}
 
 networks:
   neon_network:

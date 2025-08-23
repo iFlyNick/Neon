@@ -30,7 +30,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(o => 
+    {
+        o.Theme = ScalarTheme.Moon;
+    });
 }
 
 app.UseHttpsRedirection();
