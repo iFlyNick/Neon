@@ -109,6 +109,20 @@ services:
     networks:
       - ${DEFAULT_NETWORK}
 
+  seq:
+    #admin, admin123!
+    image: datalust/seq:latest
+    container_name: seq
+    ports:
+      - "${SEQ_EXTERNAL_PORT}:80"
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_PASSWORD: ${SEQ_PASSWORD}
+    volumes:
+      - seq-data:/data
+    networks:
+      - ${DEFAULT_NETWORK}
+
 volumes:
   postgres:
     name: neon_postgres
@@ -127,6 +141,9 @@ volumes:
     external: true
   redisinsight:
     name: neon_redisinsight
+    external: true
+  seq-data:
+    name: neon_seq-data
     external: true
 
 networks:
