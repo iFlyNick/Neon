@@ -11,4 +11,8 @@
       <ProjectReference Include="..\Neon.Persistence.Worker\Neon.Persistence.Worker.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="Pages\Home\Index.cshtml" />
+    </ItemGroup>
+
 </Project>

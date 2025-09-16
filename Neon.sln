@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Kafka.Api", "Neon.Kafka.Api\Neon.Kafka.Api.csproj", "{EADCD621-F863-4D36-BAD7-CB3431782BD8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.DbSyncService", "Neon.DbSyncService\Neon.DbSyncService.csproj", "{0AFFC060-20D1-4AD8-A7C4-FE0C9530CA9C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Obs.Api", "Neon.Obs.Api\Neon.Obs.Api.csproj", "{A2552F07-03B8-4EFE-89C9-BC34F70B6C21}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neon.Account.Api", "Neon.Account.Api\Neon.Account.Api.csproj", "{ABA66589-51F7-41E4-9655-5D6681BF899F}"
 EndProject
@@ -35,18 +31,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EADCD621-F863-4D36-BAD7-CB3431782BD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EADCD621-F863-4D36-BAD7-CB3431782BD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EADCD621-F863-4D36-BAD7-CB3431782BD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EADCD621-F863-4D36-BAD7-CB3431782BD8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0AFFC060-20D1-4AD8-A7C4-FE0C9530CA9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0AFFC060-20D1-4AD8-A7C4-FE0C9530CA9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AFFC060-20D1-4AD8-A7C4-FE0C9530CA9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AFFC060-20D1-4AD8-A7C4-FE0C9530CA9C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A2552F07-03B8-4EFE-89C9-BC34F70B6C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2552F07-03B8-4EFE-89C9-BC34F70B6C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A2552F07-03B8-4EFE-89C9-BC34F70B6C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A2552F07-03B8-4EFE-89C9-BC34F70B6C21}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABA66589-51F7-41E4-9655-5D6681BF899F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABA66589-51F7-41E4-9655-5D6681BF899F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABA66589-51F7-41E4-9655-5D6681BF899F}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,5 +1,15 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Neon - Twitch Bot";
 }
+
+<div class="text-center">
+    <h1>Neon Twitch Bot</h1>
+    
+    <div>
+        <a class="btn btn-twitch" type="button" href="https://id.twitch.tv/oauth2/authorize?response_type=code&redirect_uri=http://localhost:7168/api/v1/TwitchAuthentication&client_id=wseezf5d27auvlsa3rcjhe339f3d7c&scope=bits%3Aread%20channel%3Amoderate%20moderator%3Aread%3Afollowers%20moderator%3Aread%3Achatters%20channel%3Aread%3Asubscriptions%20channel%3Aread%3Aredemptions%20channel%3Aread%3Aads%20channel%3Aread%3Ahype_train%20channel%3Abot%20user%3Aread%3Achat">
+            <span><i class="bi bi-twitch"></i> Connect</span>
+        </a>
+    </div>
+</div>
