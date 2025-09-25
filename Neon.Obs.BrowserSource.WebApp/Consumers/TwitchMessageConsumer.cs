@@ -55,8 +55,14 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
             using var scope = serviceScopeFactory.CreateScope();
 
             var jsonMessage = JsonConvert.DeserializeObject<TwitchMessage>(message);
+
+            if (jsonMessage is null || string.IsNullOrEmpty(jsonMessage.ChannelId))
+            {
+                logger.LogDebug("Received null or invalid message: {message}", message);
+                return;
+            }
             
-            await chatHub.Clients.All.SendAsync("ReceiveMessage", jsonMessage);
+            await chatHub.Clients.Group(jsonMessage.ChannelId).SendAsync("ReceiveMessage", jsonMessage);
         }
         catch (Exception ex)
         {

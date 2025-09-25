@@ -6,8 +6,6 @@ namespace Neon.Core.Services.Kafka;
 
 public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
 {
-    private readonly ILogger<KafkaService> _logger = logger;
-
     private IProducer<string, string>? _producer;
 
     public void SubscribeConsumerEvent(KafkaConsumerConfig? config, Func<ConsumeResult<Ignore, string>, Task>? callback, Func<ConsumeException, Task>? exceptionCallback = null, CancellationToken ct = default)
@@ -24,7 +22,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
 
             if (partition == -1)
             {
-                _logger.LogError("Failed to get partition for key {key}", config.TargetPartition);
+                logger.LogError("Failed to get partition for key {key}", config.TargetPartition);
                 return;
             }
 
@@ -39,7 +37,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
                 }
                 catch (ConsumeException e)
                 {
-                    _logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
+                    logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
                     exceptionCallback?.Invoke(e);
                 }
             }
@@ -57,7 +55,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
 
         if (string.IsNullOrEmpty(message))
         {
-            _logger.LogWarning("No message passed to producer method. Skipping producer call");
+            logger.LogWarning("No message passed to producer method. Skipping producer call");
             return;
         }
 
@@ -70,7 +68,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
         }
         catch (ProduceException<Null, string> e)
         {
-            _logger.LogError("Delivery failed: {error}. Invoking callback.", e.Error.Reason);
+            logger.LogError("Delivery failed: {error}. Invoking callback.", e.Error.Reason);
             exceptionCallback?.Invoke(e);
         }
     }

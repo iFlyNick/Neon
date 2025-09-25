@@ -3,16 +3,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Neon.Obs.BrowserSource.WebApp.Pages;
 
-public class IndexModel : PageModel
+public class IndexModel(ILogger<IndexModel> logger) : PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
-
-    public IndexModel(ILogger<IndexModel> logger)
+    public void OnGet([FromQuery] string? broadcasterId)
     {
-        _logger = logger;
-    }
-
-    public void OnGet()
-    {
+        logger.LogInformation("Index page accessed with broadcasterId: {broadcasterId}", broadcasterId);
     }
 }
