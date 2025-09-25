@@ -1,7 +1,6 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Options;
 using Neon.Core.Models.Chatbot;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Services.Kafka;
 using Neon.TwitchChatbotService.Models;
 using Neon.TwitchChatbotService.Services.Messaging;
@@ -13,9 +12,8 @@ public class TwitchChatbotConsumer(ILogger<TwitchChatbotConsumer> logger, IServi
 {
     private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
     
-    private readonly string? _topic = "twitch-chatbot-messages";
-    private readonly string? _groupId = "twitch-chatbot-messages-group";
-    private readonly string? _partitionKey = "0";
+    private const string? Topic = "twitch-chatbot-messages";
+    private const string? GroupId = "twitch-chatbot-messages-group";
     
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -27,17 +25,15 @@ public class TwitchChatbotConsumer(ILogger<TwitchChatbotConsumer> logger, IServi
     {
         var config = GetConsumerConfig();
 
-        kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
+        kafkaService.SubscribeConsumerEvent(config, Topic, OnConsumerMessageReceived, OnConsumerException, ct);
     }
     
-    private KafkaConsumerConfig GetConsumerConfig()
+    private ConsumerConfig GetConsumerConfig()
     {
-        return new KafkaConsumerConfig
+        return new ConsumerConfig
         {
-            Topic = _topic,
-            TargetPartition = _partitionKey,
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
-            GroupId = _groupId,
+            GroupId = GroupId,
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }

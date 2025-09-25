@@ -65,7 +65,7 @@ function appendChatMessage(message) {
 
 async function startConnection() {
     try {
-        let channelId = new URLSearchParams(window.location.search.toLowerCase()).get("id");
+        let channelId = new URLSearchParams(window.location.search.toLowerCase()).get("broadcasterid");
         if (channelId === undefined || channelId === null) {
             console.log("No channel id provided");
             return;

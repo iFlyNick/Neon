@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Confluent.Kafka;
+using Microsoft.Extensions.Options;
 using Neon.Core.Models;
 using Neon.Core.Models.Chatbot;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
@@ -21,6 +21,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
     
     private const string GlobalEmoteCacheKey = "globalEmotes";
     private const string DefaultChatterColor = "#E79A55";
+
+    private const string ProducerTopic = "twitch-chatbot-messages";
     
     public async Task<ProcessedMessage?> ProcessTwitchMessage(string? message, CancellationToken ct = default)
     {
@@ -303,15 +305,13 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         
         var kafkaProducerConfig = GetKafkaProducerConfig();
         
-        await kafkaService.ProduceAsync(kafkaProducerConfig, JsonConvert.SerializeObject(message), null, ct);
+        await kafkaService.ProduceAsync(kafkaProducerConfig, ProducerTopic, message.ChannelId, JsonConvert.SerializeObject(message), null, ct);
     }
 
-    private KafkaProducerConfig GetKafkaProducerConfig()
+    private ProducerConfig GetKafkaProducerConfig()
     {
-        return new KafkaProducerConfig
+        return new ProducerConfig
         {
-            Topic = "twitch-chatbot-messages",
-            TargetPartition = "0",
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers
         };
     }

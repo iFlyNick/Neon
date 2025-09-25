@@ -1,7 +1,6 @@
 ﻿using Confluent.Kafka;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Services.Kafka;
 using Neon.Obs.BrowserSource.WebApp.Hubs;
 using Neon.Obs.BrowserSource.WebApp.Models;
@@ -13,9 +12,8 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
 {
     private readonly BaseKafkaConfig _kafkaConfig = kafkaConfig.Value ?? throw new ArgumentNullException(nameof(kafkaConfig));
     
-    private readonly string? _topic = "twitch-channel-processed-messages";
-    private readonly string? _groupId = "twitch-channel-processed-messages-group";
-    private readonly string? _partitionKey = "0";
+    private readonly string? Topic = "twitch-channel-processed-messages";
+    private readonly string? GroupId = "twitch-channel-processed-messages-group";
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -28,17 +26,15 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     {
         var config = GetConsumerConfig();
 
-        kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
+        kafkaService.SubscribeConsumerEvent(config, Topic, OnConsumerMessageReceived, OnConsumerException, ct);
     }
 
-    private KafkaConsumerConfig GetConsumerConfig()
+    private ConsumerConfig GetConsumerConfig()
     {
-        return new KafkaConsumerConfig
+        return new ConsumerConfig
         {
-            Topic = _topic,
-            TargetPartition = _partitionKey,
             BootstrapServers = _kafkaConfig.BootstrapServers,
-            GroupId = _groupId,
+            GroupId = GroupId,
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
@@ -73,5 +69,6 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     private async Task OnConsumerException(ConsumeException e)
     {
         logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
+        await Task.CompletedTask;
     }
 }

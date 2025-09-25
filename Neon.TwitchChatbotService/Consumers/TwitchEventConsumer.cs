@@ -1,6 +1,5 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Options;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Kafka;
 using Neon.TwitchChatbotService.Models;
@@ -18,9 +17,10 @@ public class TwitchEventConsumer(
     private readonly AppBaseConfig _appBaseConfig =
         appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
 
-    private readonly string? _topic = "twitch-channel-events";
-    private readonly string? _groupId = "twitch-channel-events-group";
-    private readonly string? _partitionKey = "0";
+    private const string? Topic = "twitch-channel-events";
+    private const string? GroupId = "twitch-channel-events-group";
+
+    private const string? ProducerTopic = "twitch-chatbot-messages";
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -32,17 +32,15 @@ public class TwitchEventConsumer(
     {
         var config = GetConsumerConfig();
 
-        kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
+        kafkaService.SubscribeConsumerEvent(config, Topic, OnConsumerMessageReceived, OnConsumerException, ct);
     }
 
-    private KafkaConsumerConfig GetConsumerConfig()
+    private ConsumerConfig GetConsumerConfig()
     {
-        return new KafkaConsumerConfig
+        return new ConsumerConfig
         {
-            Topic = _topic,
-            TargetPartition = _partitionKey,
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
-            GroupId = _groupId,
+            GroupId = GroupId,
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
@@ -64,12 +62,14 @@ public class TwitchEventConsumer(
 
             var chatbotMessage = eventService.ProcessMessage(twitchMessage);
 
-            await kafkaService.ProduceAsync(new KafkaProducerConfig
-            {
-                Topic = "twitch-chatbot-messages",
-                TargetPartition = "0",
-                BootstrapServers = _appBaseConfig.KafkaBootstrapServers
-            }, JsonConvert.SerializeObject(chatbotMessage));
+            await kafkaService.ProduceAsync(new ProducerConfig
+                {
+                    BootstrapServers = _appBaseConfig.KafkaBootstrapServers
+                },
+                ProducerTopic,
+                chatbotMessage?.ChannelId,
+                JsonConvert.SerializeObject(chatbotMessage)
+            );
         }
         catch (Exception ex)
         {
@@ -79,7 +79,7 @@ public class TwitchEventConsumer(
 
     private async Task OnConsumerException(ConsumeException e)
     {
-        logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
+        logger.LogError("Error consuming message: {error}.", e.Error.Reason);
         await Task.CompletedTask;
     }
 }
