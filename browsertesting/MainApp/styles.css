@@ -1,0 +1,146 @@
+:root {
+    --selected-nav: rgba(117, 61, 0);
+    --highlight-color: rgba(146, 76, 0);
+    --sidebar-width: 250px;
+    --header-height: 50px;
+}
+
+.dashboard-container {
+    display: grid;
+    height: 100vh;
+    width: 100vw;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-rows: var(--header-height) 1fr;
+    grid-template-areas:
+        "sidebar main"
+        "sidebar main";
+}
+
+#sidebar {
+    grid-area: sidebar;
+}
+
+#main-content {
+    grid-area: main;
+}
+
+.main-container {
+    display: grid;
+    height: 100%;
+    width: 100%;
+    grid-template-rows: var(--header-height) 1fr;
+    grid-template-areas:
+        "header"
+        "main";
+}
+
+#header {
+    grid-area: header;
+}
+
+#content {
+    grid-area: main;
+    overflow-y: auto;
+}
+
+#sidebar-main {
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+}
+
+#chatbot-configuration {
+    .form-check, .form-switch, .form-label {
+        margin-top: .125rem;
+        margin-bottom: .125rem;
+    }
+    
+    .form-check-input {
+        margin-top: .4rem;
+    }
+}
+
+.btn-success {
+    background-color: var(--selected-nav);
+    border-color: var(--selected-nav);
+}
+
+.btn-success:hover {
+    background-color: var(--highlight-color);
+    border-color: var(--highlight-color);
+}
+
+.btn-success:active {
+    background-color: var(--selected-nav) !important;
+    border-color: var(--highlight-color) !important;
+}
+
+.btn-outline-success {
+    border-color: var(--selected-nav);
+    color: var(--highlight-color);
+}
+
+.icon-transition {
+    transition: transform 0.3s ease;
+}
+
+#overlay-url input {
+    filter: blur(4px);
+    user-select: none;
+    cursor: not-allowed;
+}
+
+.form-range, .form-check-input {
+    cursor: pointer;
+}
+
+.form-switch label {
+    cursor: pointer;
+    user-select: none;
+}
+
+output {
+    user-select: none;
+}
+
+.neon-tooltip {
+    --bs-tooltip-bg: var(--bs-gray-dark);
+    --bs-tooltip-color: var(--bs-white);
+    opacity: 1 !important;
+}
+
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    
+    .sidebar-subsection {
+        display: flex;
+        flex-direction: column;
+        margin-left: .5rem;
+    }
+
+    .sidebar-link {
+        cursor: pointer;
+        padding: .5rem;
+        margin-bottom: .5rem;
+        border-radius: .5rem;
+        
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .icon-spacer {
+            margin-right: .25rem;
+        }
+    }
+    
+    .sidebar-link.selected {
+        background-color: var(--selected-nav);
+    }
+    
+    .sidebar-link:hover {
+        background-color: var(--highlight-color);
+    }
+}
