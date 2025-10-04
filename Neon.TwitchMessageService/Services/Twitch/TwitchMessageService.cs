@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Confluent.Kafka;
+using Microsoft.Extensions.Options;
 using Neon.Core.Models;
 using Neon.Core.Models.Chatbot;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch.EventSub;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
@@ -21,6 +21,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
     
     private const string GlobalEmoteCacheKey = "globalEmotes";
     private const string DefaultChatterColor = "#E79A55";
+
+    private const string ProducerTopic = "twitch-chatbot-messages";
     
     public async Task<ProcessedMessage?> ProcessTwitchMessage(string? message, CancellationToken ct = default)
     {
@@ -44,6 +46,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
 
         var channelId = twitchMessage.Payload.Event.BroadcasterUserId;
 
+        var chatterFlags = GetTwitchChatterFlagsFromMessage(twitchMessage);
+        
         //check if this message is a command, if so, send it to the topic and continue on
         if (_neonSettings.ChatCommandPrefix is not null &&
             twitchMessage.Payload.Event.TwitchMessage.Text.StartsWith(_neonSettings.ChatCommandPrefix ?? '!'))
@@ -56,7 +60,8 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
                 ChatterName = twitchMessage.Payload.Event.ChatterUserName,
                 ChatterId = twitchMessage.Payload.Event.ChatterUserId,
                 EventType = "message",
-                EventMessage = null //this won't be used for chat based commands
+                EventMessage = null, //this won't be used for chat based commands
+                ChatterFlags = chatterFlags
             };
             
             await ProduceChatbotMessage(chatbotMessage, ct);
@@ -74,11 +79,46 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         var messageBadges = twitchMessage.Payload.Event.Badges;
         var providerBadges = await badgeService.GetProviderBadgesFromBadges(channelId, messageBadges, ct);
         
-        var processedMessage = GetProcessedMessage(twitchMessage, allEmotes, providerBadges);
+        var processedMessage = GetProcessedMessage(twitchMessage, allEmotes, providerBadges, chatterFlags);
 
         return processedMessage;
     }
 
+    private TwitchChatterFlags? GetTwitchChatterFlagsFromMessage(Message? message)
+    {
+        if (message is null || message.Payload is null || message.Payload.Event is null ||
+            message.Payload.Event.Badges is null)
+            return null;
+
+        var retVal = new TwitchChatterFlags();
+        
+        //broadcaster check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "broadcaster"))
+            retVal.IsBroadcaster = true;
+        
+        //moderator check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "moderator"))
+            retVal.IsModerator = true;
+        
+        //vip check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "vip"))
+            retVal.IsVip = true;
+        
+        //subscriber check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "subscriber") || message.Payload.Event.Badges.Any(s => s.SetId == "founder"))
+            retVal.IsSubscriber = true;
+        
+        //staff check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "staff"))
+            retVal.IsStaff = true;
+        
+        //turbo check
+        if (message.Payload.Event.Badges.Any(s => s.SetId == "turbo"))
+            retVal.IsTurbo = true;
+        
+        return retVal;
+    }
+    
     private async Task PreloadGlobalEmotes(CancellationToken ct)
     {
         try
@@ -202,12 +242,15 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         return retVal;
     }
 
-    private ProcessedMessage? GetProcessedMessage(Message? message, List<ProviderEmote>? emotes, List<ProviderBadge>? providerBadges)
+    private ProcessedMessage? GetProcessedMessage(Message? message, List<ProviderEmote>? emotes, List<ProviderBadge>? providerBadges, TwitchChatterFlags? chatterFlags)
     {
         if (message is null || message.Payload is null || message.Payload.Event is null || message.Payload.Event.TwitchMessage is null || string.IsNullOrEmpty(message.Payload.Event.TwitchMessage.Text))
             return null;
 
         ProcessedMessage retVal;
+        
+        //track the channel id the message was sent against. this will help push messages over signalr to the correct group for example
+        var channelId = message.Payload.Event.BroadcasterUserId;
         
         if (emotes is null || emotes.Count == 0)
         {
@@ -218,7 +261,9 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
                 ChannelName = message.Payload.Event.BroadcasterUserName,
                 ChatterName = message.Payload.Event.ChatterUserName,
                 ChatterColor = string.IsNullOrEmpty(message.Payload.Event.Color) ? DefaultChatterColor : message.Payload.Event.Color,
-                ChatterBadges = providerBadges
+                ChatterBadges = providerBadges,
+                ChatterFlags = chatterFlags,
+                ChannelId = channelId
             };
             
             return retVal;
@@ -245,7 +290,9 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
             ChannelName = message.Payload.Event.BroadcasterUserName,
             ChatterName = message.Payload.Event.ChatterUserName,
             ChatterColor = string.IsNullOrEmpty(message.Payload.Event.Color) ? DefaultChatterColor : message.Payload.Event.Color,
-            ChatterBadges = providerBadges
+            ChatterBadges = providerBadges,
+            ChatterFlags = chatterFlags,
+            ChannelId = channelId
         };
 
         return retVal;
@@ -258,15 +305,13 @@ public class TwitchMessageService(ILogger<TwitchMessageService> logger, IHttpSer
         
         var kafkaProducerConfig = GetKafkaProducerConfig();
         
-        await kafkaService.ProduceAsync(kafkaProducerConfig, JsonConvert.SerializeObject(message), null, ct);
+        await kafkaService.ProduceAsync(kafkaProducerConfig, ProducerTopic, message.ChannelId, JsonConvert.SerializeObject(message), null, ct);
     }
 
-    private KafkaProducerConfig GetKafkaProducerConfig()
+    private ProducerConfig GetKafkaProducerConfig()
     {
-        return new KafkaProducerConfig
+        return new ProducerConfig
         {
-            Topic = "twitch-chatbot-messages",
-            TargetPartition = "0",
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers
         };
     }

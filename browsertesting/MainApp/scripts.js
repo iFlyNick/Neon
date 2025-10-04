@@ -29,12 +29,17 @@ $(function () {
             syncChatMessageRemoveDelayOutput($(this));
         });
         
+        $('#chat-font-size-input').on('input', function () {
+            syncChatFontSizeOutput($(this));
+        });
+
         $('#chat-message-remove-delay-disable').on('change', function () {
             toggleRemoveDelayInput($(this));
         });
 
         syncChatDelayOutput($('#chat-delay-input'));
         syncChatMessageRemoveDelayOutput($('#chat-message-remove-delay-input'));
+        syncChatFontSizeOutput($('#chat-font-size-input'));
         toggleRemoveDelayInput($('#chat-message-remove-delay-disable'));
     }
 
@@ -48,6 +53,10 @@ $(function () {
     
     function syncChatDelayOutput(element) {
         $('#chat-delay-value').text(`${element.val()}s`);
+    }
+    
+    function syncChatFontSizeOutput(element) {
+        $('#chat-font-size-value').text(`${element.val()}px`);
     }
 
     function copyOverlayUrl(element) {

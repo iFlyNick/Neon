@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Confluent.Kafka;
+using Microsoft.Extensions.Options;
 using Neon.Core.Data.Twitch;
 using Neon.Core.Models;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Kafka;
 using Neon.Core.Services.Twitch.Authentication;
@@ -16,6 +16,9 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
 {
     private readonly BaseKafkaConfig _baseKafkaConfig = baseKafkaSettings.Value ?? throw new ArgumentNullException(nameof(baseKafkaSettings));
     private readonly NeonSettings _twitchAppSettings = twitchAppSettings.Value ?? throw new ArgumentNullException(nameof(twitchAppSettings));
+
+    private const string ProducerTopicEvents = "twitch-channel-events";
+    private const string ProducerTopicChats = "twitch-channel-chats";
     
     //TODO: maybe dont put the kafka/oauth service in the constructor long term
 
@@ -45,13 +48,17 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         await wsService.ConnectAsync(async twitchMessage =>
         {
             //logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
-            
-            await kafkaService.ProduceAsync(new KafkaProducerConfig
-            {
-                Topic = "twitch-channel-events",
-                TargetPartition = "0",
-                BootstrapServers = _baseKafkaConfig.BootstrapServers
-            }, JsonConvert.SerializeObject(twitchMessage), null, ct);
+
+            await kafkaService.ProduceAsync(new ProducerConfig
+                {
+                    BootstrapServers = _baseKafkaConfig.BootstrapServers
+                },
+                ProducerTopicEvents,
+                twitchMessage?.Payload?.Event?.BroadcasterUserId,
+                JsonConvert.SerializeObject(twitchMessage),
+                null,
+                ct
+            );
         }, ct);
 
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat
@@ -160,12 +167,16 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         {
             //logger.LogDebug("{channel} | {type} | {user} : {chatMessage}", twitchMessage?.Payload?.Event?.BroadcasterUserName, twitchMessage?.Payload?.Event?.MessageType, twitchMessage?.Payload?.Event?.ChatterUserName, twitchMessage?.Payload?.Event?.TwitchMessage?.Text);
 
-            await kafkaService.ProduceAsync(new KafkaProducerConfig
-            {
-                Topic = "twitch-channel-chats",
-                TargetPartition = "0",
-                BootstrapServers = _baseKafkaConfig.BootstrapServers
-            }, JsonConvert.SerializeObject(twitchMessage), null, ct);
+            await kafkaService.ProduceAsync(new ProducerConfig
+                {
+                    BootstrapServers = _baseKafkaConfig.BootstrapServers
+                },
+                ProducerTopicChats,
+                twitchMessage?.Payload?.Event?.BroadcasterUserId,
+                JsonConvert.SerializeObject(twitchMessage),
+                null,
+                ct
+            );
         }, ct);
 
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat

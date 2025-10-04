@@ -1,6 +1,0 @@
-@Neon.Obs.Api_HostAddress = http://localhost:5210
-
-GET {{Neon.Obs.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

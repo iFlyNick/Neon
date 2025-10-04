@@ -24,6 +24,7 @@ services:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
       - ConnectionStrings__Redis=redis:6379
+      - Serilog__WriteTo__0__Args__configure__0__Args__serverUrl=http://seq:5341
       - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
     ports:
       - "${EMOTE_SERVICE_EXTERNAL_PORT}:8080"

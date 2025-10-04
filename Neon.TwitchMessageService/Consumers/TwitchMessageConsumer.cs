@@ -1,6 +1,5 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Options;
-using Neon.Core.Models.Kafka;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
 using Neon.TwitchMessageService.Models;
@@ -13,9 +12,10 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
 {
     private readonly AppBaseConfig _appBaseConfig = appBaseConfig.Value ?? throw new ArgumentNullException(nameof(appBaseConfig));
     
-    private readonly string? _topic = "twitch-channel-chats";
-    private readonly string? _groupId = "twitch-channel-messages-group";
-    private readonly string? _partitionKey = "0";
+    private const string? Topic = "twitch-channel-chats";
+    private const string? GroupId = "twitch-channel-messages-group";
+
+    private const string? ProducerTopic = "twitch-channel-processed-messages";
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -43,17 +43,15 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     {
         var config = GetConsumerConfig();
 
-        kafkaService.SubscribeConsumerEvent(config, OnConsumerMessageReceived, OnConsumerException, ct);
+        kafkaService.SubscribeConsumerEvent(config, Topic, OnConsumerMessageReceived, OnConsumerException, ct);
     }
 
-    private KafkaConsumerConfig GetConsumerConfig()
+    private ConsumerConfig GetConsumerConfig()
     {
-        return new KafkaConsumerConfig
+        return new ConsumerConfig
         {
-            Topic = _topic,
-            TargetPartition = _partitionKey,
             BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
-            GroupId = _groupId,
+            GroupId = GroupId,
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
@@ -73,12 +71,12 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
 
             var processedMessage = await msgService.ProcessTwitchMessage(message);
 
-            await kafkaService.ProduceAsync(new KafkaProducerConfig
-            {
-                Topic = "twitch-channel-processed-messages",
-                TargetPartition = "0",
-                BootstrapServers = _appBaseConfig.KafkaBootstrapServers,
-            }, JsonConvert.SerializeObject(processedMessage));
+            await kafkaService.ProduceAsync(
+                new ProducerConfig { BootstrapServers = _appBaseConfig.KafkaBootstrapServers },
+                ProducerTopic,
+            processedMessage?.ChannelId,
+        JsonConvert.SerializeObject(processedMessage)
+            );
         }
         catch (Exception ex)
         {

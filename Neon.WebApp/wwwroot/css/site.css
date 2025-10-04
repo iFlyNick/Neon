@@ -29,3 +29,14 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+.btn-twitch {
+  background-color: #9146ff;
+  border-color: #9146ff;
+  color: white;
+}
+.btn-twitch:hover {
+  background-color: #772ce8;
+  border-color: #772ce8;
+  color: white;
+}

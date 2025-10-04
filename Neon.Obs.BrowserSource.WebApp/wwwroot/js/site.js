@@ -18,10 +18,20 @@ connection.onclose(error => {
 async function tryReconnect() {
     while (true) {
         try {
+            let channelId = new URLSearchParams(window.location.search.toLowerCase()).get("id");
+            if (channelId === undefined || channelId === null) {
+                console.log("No channel id provided for reconnection");
+                break;
+            }
+            
             await connection.start();
+
+            //subscribe connection to channel
+            connection.invoke("JoinChannel", channelId).catch(err => console.error(err.toString()));
+            
             break;
         } catch (err) {
-            console.error("Reconnection attempt failed:", err);
+            //console.error("Reconnection attempt failed:", err);
             await new Promise(resolve => setTimeout(resolve, 5000));
         }
     } 
@@ -55,8 +65,17 @@ function appendChatMessage(message) {
 
 async function startConnection() {
     try {
+        let channelId = new URLSearchParams(window.location.search.toLowerCase()).get("broadcasterid");
+        if (channelId === undefined || channelId === null) {
+            console.log("No channel id provided");
+            return;
+        }
+        
         await connection.start();
         console.log("SignalR Connected.");
+        
+        //subscribe connection to channel
+        connection.invoke("JoinChannel", channelId).catch(err => console.error(err.toString()));
     } catch (err) {
         console.error(err);
         setTimeout(() => startConnection(), 5000);

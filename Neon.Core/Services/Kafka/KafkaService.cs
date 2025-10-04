@@ -1,110 +1,77 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
-using Neon.Core.Models.Kafka;
 
 namespace Neon.Core.Services.Kafka;
 
 public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
 {
-    private readonly ILogger<KafkaService> _logger = logger;
-
     private IProducer<string, string>? _producer;
 
-    public void SubscribeConsumerEvent(KafkaConsumerConfig? config, Func<ConsumeResult<Ignore, string>, Task>? callback, Func<ConsumeException, Task>? exceptionCallback = null, CancellationToken ct = default)
+    public void SubscribeConsumerEvent(ConsumerConfig? config, string? topic, Func<ConsumeResult<Ignore, string>, Task>? callback, Func<ConsumeException, Task>? exceptionCallback = null, CancellationToken ct = default)
     {
-        ConsumerConfigValidationChecks(config);
         ArgumentNullException.ThrowIfNull(callback, nameof(callback));
 
         //consumers aren't async by default, so spin up new thread to run consumer and raise events back out
-        var t = Task.Run(async () =>
+        try
         {
-            using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-
-            var partition = GetPartitionByKey(config!.BootstrapServers, config.Topic, config.TargetPartition);
-
-            if (partition == -1)
+            Task.Run(async () =>
             {
-                _logger.LogError("Failed to get partition for key {key}", config.TargetPartition);
-                return;
-            }
+                using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
 
-            consumer.Assign(new TopicPartitionOffset(config.Topic, new Partition(partition), Offset.End));
+                consumer.Subscribe(topic);
 
-            while (!ct.IsCancellationRequested)
-            {
-                try
+                while (!ct.IsCancellationRequested)
                 {
-                    var result = consumer.Consume(ct);
-                    await callback.Invoke(result);
+                    try
+                    {
+                        var result = consumer.Consume(ct);
+                        await callback.Invoke(result);
+                    }
+                    catch (ConsumeException e)
+                    {
+                        logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
+                        exceptionCallback?.Invoke(e);
+                    }
                 }
-                catch (ConsumeException e)
-                {
-                    _logger.LogError("Error consuming message: {error}. Invoking callback.", e.Error.Reason);
-                    exceptionCallback?.Invoke(e);
-                }
-            }
 
-        }, ct);
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to start Kafka consumer. Topic: {topic}", topic);
+            throw;
+        }
     }
 
-    public async Task ProduceAsync(KafkaProducerConfig? config, string? message, Func<ProduceException<Null, string>, Task>? exceptionCallback = null, CancellationToken ct = default)
+    public async Task ProduceAsync(ProducerConfig? config, string? topic, string? key, string? message, Func<ProduceException<Null, string>, Task>? exceptionCallback = null, CancellationToken ct = default)
     {
-        if (_producer is null)
+        if (config?.BootstrapServers is null)
         {
-            ProducerConfigValidationChecks(config);
-            _producer = new ProducerBuilder<string, string>(config).Build();
+            logger.LogError("Invalid producer config passed to ProduceAsync method or config bootstrap servers is undefined. Aborting produce call.");
+            return;
         }
+        
+        _producer ??= new ProducerBuilder<string, string>(config).Build();
 
-        if (string.IsNullOrEmpty(message))
+        if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(message) || string.IsNullOrEmpty(topic))
         {
-            _logger.LogWarning("No message passed to producer method. Skipping producer call");
+            logger.LogWarning("Missing key, message, or topic passed to producer method. Skipping producer call. Key: {key} | Message: {message} | Topic: {topic}", string.IsNullOrEmpty(key) ? "no value passed" : "value passed", string.IsNullOrEmpty(message) ? "no value passed" : "value passed", string.IsNullOrEmpty(topic) ? "no value passed" : "value passed");
             return;
         }
 
         try
         {
-            var msg = new Message<string, string> { Key = config!.TargetPartition!, Value = message };
+            var msg = new Message<string, string> { Key = key, Value = message };
 
-            var deliveryReport = await _producer.ProduceAsync(config!.Topic, msg, ct);
-            //_logger.LogDebug("Delivered message to {topic} with target partition {partition}", config.Topic, config.TargetPartition);
+            var deliveryReport = await _producer.ProduceAsync(topic, msg, ct);
+
+            if (deliveryReport.Status != PersistenceStatus.Persisted)
+                logger.LogError("Message delivery failed for key {key} to topic {topic}.", key, topic);
         }
         catch (ProduceException<Null, string> e)
         {
-            _logger.LogError("Delivery failed: {error}. Invoking callback.", e.Error.Reason);
+            logger.LogError("Delivery failed: {error}. Invoking callback.", e.Error.Reason);
             exceptionCallback?.Invoke(e);
         }
-    }
-
-    private static void ConsumerConfigValidationChecks(KafkaConsumerConfig? config)
-    {
-        ArgumentNullException.ThrowIfNull(config, nameof(config));
-        ArgumentNullException.ThrowIfNull(config.BootstrapServers, nameof(config.BootstrapServers));
-        ArgumentNullException.ThrowIfNull(config.GroupId, nameof(config.GroupId));
-        ArgumentNullException.ThrowIfNull(config.Topic, nameof(config.Topic));
-        ArgumentNullException.ThrowIfNull(config.TargetPartition, nameof(config.TargetPartition));
-    }
-
-    private static void ProducerConfigValidationChecks(KafkaProducerConfig? config)
-    {
-        ArgumentNullException.ThrowIfNull(config, nameof(config));
-        ArgumentNullException.ThrowIfNull(config.BootstrapServers, nameof(config.BootstrapServers));
-        ArgumentNullException.ThrowIfNull(config.Topic, nameof(config.Topic));
-        ArgumentNullException.ThrowIfNull(config.TargetPartition, nameof(config.TargetPartition));
-    }
-
-    private int GetPartitionByKey(string? bootstrapServer, string? topic, string? partitionKey)
-    {
-        if (string.IsNullOrEmpty(bootstrapServer) || string.IsNullOrEmpty(topic) || string.IsNullOrEmpty(partitionKey))
-            return -1;
-
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServer }).Build();
-        var metadata = adminClient.GetMetadata(topic, TimeSpan.FromSeconds(10));
-        if (metadata.Topics.Count > 0)
-        {
-            var topicMetadata = metadata.Topics.First();
-            var partition = topicMetadata.Partitions.FirstOrDefault(p => p.PartitionId == partitionKey.GetHashCode() % topicMetadata.Partitions.Count);
-            return partition is null ? -1 : partition.PartitionId;
-        }
-        return -1;
     }
 }

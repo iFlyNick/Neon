@@ -1,4 +1,6 @@
-﻿namespace Neon.Obs.BrowserSource.WebApp.Models;
+﻿using Neon.Core.Models.Chatbot;
+
+namespace Neon.Obs.BrowserSource.WebApp.Models;
 
 public class TwitchMessage
 {
@@ -7,4 +9,6 @@ public class TwitchMessage
     public string? ChatterColor { get; set; }
     public List<ProviderBadge>? ChatterBadges { get; set; }
     public string? Message { get; set; }
+    public TwitchChatterFlags? ChatterFlags { get; set; }
+    public string? ChannelId { get; set; }
 }
