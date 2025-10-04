@@ -1,0 +1,27 @@
+﻿name: Deploy staging scalable services
+
+on:
+  push:
+    branches:
+      - staging
+  
+jobs:
+  deploy-scalable:
+    runs-on: [self-hosted, staging]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Deploy scalable services
+        run: |
+          echo "deploying scalable services to staging..."
+          docker compose \
+          -f containers/neon/scalable/docker-compose.yml \
+          --env-file ~/neon/containers/.env \
+          up -d --build
+          
+      - name: list running containers
+        run: docker ps
+        
+      - name: finalize
+        run: echo "Deployed scalable services to staging successfully."
