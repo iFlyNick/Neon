@@ -60,7 +60,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
         logger.LogInformation("Connecting websocket at {time}", DateTime.UtcNow);
         Client = new ClientWebSocket();
-
+        
         await Client.ConnectAsync(new Uri(_twitchSettings.EventSubUrl), ct);
 
         logger.LogInformation("Websocket connected at {time}. Hash: {hash}", DateTime.UtcNow, GetHashCode());
@@ -70,13 +70,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
     public async Task DisconnectAsync(CancellationToken ct = default)
     {
-        if (Client is null)
-        {
-            logger.LogWarning("Client is already disconnected");
-            return;
-        }
-
-        if (!_isConnected)
+        if (Client is null || !_isConnected)
         {
             logger.LogWarning("Client is already disconnected");
             return;
@@ -129,8 +123,12 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId } 
         };
 
+        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, twitchChannelId);
+        
         foreach (var subscription in subscriptionTypes)
         {
+            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, twitchChannelId);
+            
             var message = new Message
             {
                 Payload = new Payload
@@ -161,8 +159,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             if (resp is null || !resp.IsSuccessStatusCode)
             {
-                logger.LogDebug("Failed to subscribe to channel chat. Response: {response}", resp?.StatusCode);
-                return;
+                var tRespContent = resp is null ? "no response" : await resp.Content.ReadAsStringAsync(ct);
+                logger.LogDebug("Failed to subscribe to channel chat event {event}. StatusCode: {code} | Response: {response}", $"{subscription.Name}:{subscription.Version}", resp?.StatusCode, tRespContent);
+                continue;
             }
             
             var respContent = await resp.Content.ReadAsStringAsync(ct);
@@ -200,6 +199,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId }
         };
 
+        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, channel);
+        
         foreach (var subscription in subscriptionTypes)
         {
             if (string.IsNullOrEmpty(subscription.Name) || string.IsNullOrEmpty(subscription.Version))
@@ -239,8 +240,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             if (resp is null || !resp.IsSuccessStatusCode)
             {
                 var tRespContent = resp is null ? "no response" : await resp.Content.ReadAsStringAsync(ct);
-                logger.LogDebug("Failed to subscribe to channel events. StatusCode: {code} | Response: {response}", resp?.StatusCode, tRespContent);
-                return;
+                logger.LogDebug("Failed to subscribe to channel event {event}. StatusCode: {code} | Response: {response}", $"{subscription.Name}:{subscription.Version}", resp?.StatusCode, tRespContent);
+                continue;
             }
             
             var respContent = await resp.Content.ReadAsStringAsync(ct);
@@ -270,7 +271,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             if (result.MessageType == WebSocketMessageType.Close || Client.State == WebSocketState.CloseReceived || Client.State == WebSocketState.CloseSent || Client.State == WebSocketState.Closed || Client.State == WebSocketState.Aborted)
             {
-                logger.LogWarning("Websocket connection closed. Reason: {reason}", result.CloseStatusDescription);
+                logger.LogWarning("Websocket connection closed. SessionId: {session}. Reason: {reason}", SessionId, result.CloseStatusDescription);
                 await DisconnectAsync(ct);
                 break;
             }
@@ -281,7 +282,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             Array.Clear(buffer, 0, buffer.Length);
         }
 
-        logger.LogDebug("Websocket listen async method has exited the while loop, the connection will be closed.");
+        logger.LogDebug("Websocket listen async method has exited the while loop, the connection has been closed.");
     }
 
     private async Task HandleMessage(string? message, Func<Message?, Task> callback, CancellationToken ct = default)
@@ -297,6 +298,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_keepalive"))
             return;
 
+        logger.LogDebug("Received ws message type: {messageType} | SessionId: {sessionId}", messageType, SessionId);
+        
         //_logger.LogDebug("Received message from twitch: {message}", message);
         Message? twitchMessage = null;
         try
@@ -313,7 +316,10 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         //need to intercept session id from welcome message
         var wsSessionId = twitchMessage?.Payload?.Session?.Id;
         if (!string.IsNullOrEmpty(wsSessionId) && !wsSessionId.Equals(SessionId))
+        {
+            logger.LogDebug("Received new session id from twitch websocket: {sessionId}", wsSessionId);
             SessionId = wsSessionId;
+        }
 
         if (!string.IsNullOrEmpty(messageType) && _skippableMessages.Contains(messageType))
             return;

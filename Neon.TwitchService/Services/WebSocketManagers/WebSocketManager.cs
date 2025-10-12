@@ -25,6 +25,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
     //additionally holds neon bot for sending chat messages
     //channel name : iwebsocketservice
     private readonly Dictionary<string, IWebSocketService> _webSocketServices = [];
+    public IEnumerable<IWebSocketService> GetWebSocketServices() => _webSocketServices.Values;
 
     public async Task Subscribe(string? broadcasterName, CancellationToken ct = default)
     {
