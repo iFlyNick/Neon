@@ -19,7 +19,7 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext? context, CancellationToken ct = default)
     {
         var wsServices = webSocketManager.GetWebSocketServices().ToList();
-
+        
         string? msg;
         
         if (wsServices.Count == 0)
@@ -41,10 +41,10 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
         }
         
         //unhealth services found, set status to degraded
-        logger.LogWarning("{unhealthyCount} unhealthy websocket services found.", unhealthyServices.Count);
-        msg = $"{unhealthyServices.Count} unhealthy websocket services found.";
+        logger.LogWarning("{unhealthyCount} unhealthy websocket services found out of expected {wsCount} services.", unhealthyServices.Count, wsServices.Count);
+        msg = $"{unhealthyServices.Count} unhealthy websocket services found. Total services: {wsServices.Count}";
         await SendKafkaHealthCheckResult(msg, ct);
-        return await Task.FromResult(HealthCheckResult.Degraded(msg));
+        return await Task.FromResult(unhealthyServices.Count == wsServices.Count ? HealthCheckResult.Unhealthy(msg) : HealthCheckResult.Degraded(msg));
     }
 
     private async Task SendKafkaHealthCheckResult(string description, CancellationToken ct = default)
