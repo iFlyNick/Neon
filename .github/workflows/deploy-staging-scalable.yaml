@@ -11,7 +11,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+      
+      - name: stop existing scalable services
+        run: |
+          echo "stopping existing scalable services..."
+          docker compose \
+          -f containers/neon/scalable/docker-compose.yml \
+          --env-file ~/neon/containers/.env \
+          down
+      
       - name: Deploy scalable services
         run: |
           echo "deploying scalable services to staging..."
