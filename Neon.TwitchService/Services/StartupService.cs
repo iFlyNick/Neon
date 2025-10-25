@@ -5,12 +5,27 @@ using Neon.TwitchService.Services.WebSocketManagers;
 
 namespace Neon.TwitchService.Services;
 
-public class StartupService(ILogger<StartupService> logger, IWebSocketManager webSocketManager, ITwitchDbService dbService, IOptions<NeonSettings> neonSettings) : IStartupService
+public class StartupService(ILogger<StartupService> logger, IWebSocketManager webSocketManager, IServiceScopeFactory serviceScopeFactory, IOptions<NeonSettings> neonSettings) : IHostedService
 {
     private readonly NeonSettings _neonSettings = neonSettings.Value;
-    
-    public async Task SubscribeAllActiveChannels(CancellationToken ct = default)
+
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Starting twitch service...");
+        await SubscribeAllActiveChannels(cancellationToken);
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Shutting down twitch service...");
+        return Task.CompletedTask;
+    }
+    
+    private async Task SubscribeAllActiveChannels(CancellationToken ct = default)
+    {
+        using var scope = serviceScopeFactory.CreateScope();
+        var dbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
+        
         if (string.IsNullOrEmpty(_neonSettings.AppName))
         {
             logger.LogCritical("AppName is null or empty. Cannot subscribe to channels.");

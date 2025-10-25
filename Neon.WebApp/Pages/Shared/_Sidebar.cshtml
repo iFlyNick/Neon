@@ -1,0 +1,41 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<div id="dashboard" class="dashboard-container">
+    <div id="sidebar" class="d-flex flex-column p-3 expanded">
+        <div id="logo">
+            <h1>Neon</h1>
+        </div>
+        <div id="sidebar-main">
+            <div class="sidebar-section">
+                <button role="button" class="btn expanded">
+                    <span class="d-flex flex-row justify-content-between fw-bold">Home<i class="fa-solid fa-chevron-down align-content-center icon-transition"></i></span>
+                </button>
+                <div class="sidebar-subsection">
+                    <div id="sidebar-dashboard-home" class="sidebar-link">
+                        <a href="#"><span><i class="fa-solid fa-chart-line icon-spacer"></i>Dashboard</span></a>
+                    </div>
+                    <div id="sidebar-event-feed" class="sidebar-link">
+                        <a href="#"><span><i class="fa-solid fa-bell icon-spacer"></i>Event Feed</span></a>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <button role="button" class="btn expanded">
+                    <span class="d-flex flex-row justify-content-between fw-bold">Chatbot<i class="fa-solid fa-chevron-down align-content-center icon-transition"></i></span>
+                </button>
+                <div class="sidebar-subsection">
+                    <div id="sidebar-chatbot-commands" class="sidebar-link">
+                        <a href="#"><span><i class="fa-solid fa-comment icon-spacer"></i>Commands</span></a>
+                    </div>
+                    <div id="sidebar-chatbot-setup" class="sidebar-link">
+                        <a href="#"><span><i class="fa-solid fa-gear icon-spacer"></i>Setup</span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    @RenderBody();
+</div>

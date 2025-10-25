@@ -21,6 +21,7 @@ public class TwitchAccount : BaseModel
     public TwitchAccountAuth? TwitchAccountAuth { get; set; }
     public ICollection<TwitchAccountScope>? TwitchAccountScopes { get; set; }
     public TwitchAccountLoyalty? TwitchAccountLoyalty { get; set; }
+    public ICollection<TwitchChannelCommand>? TwitchChannelCommands { get; set; }
 }
 
 public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount>
@@ -41,6 +42,7 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
         builder.HasOne(s => s.TwitchAccountAuth).WithOne(s => s.TwitchAccount).HasForeignKey<TwitchAccountAuth>(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(s => s.TwitchAccountScopes).WithOne(s => s.TwitchAccount).HasForeignKey(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(s => s.TwitchAccountLoyalty).WithOne(s => s.TwitchAccount).HasForeignKey<TwitchAccountLoyalty>(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(s => s.TwitchChannelCommands).WithOne(s => s.TwitchAccount).HasForeignKey(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
 
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();
