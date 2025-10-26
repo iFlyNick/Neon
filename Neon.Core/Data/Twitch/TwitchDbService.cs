@@ -55,8 +55,8 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         }
 
         var resp = await context.TwitchAccount
-            .Include(s => s.TwitchAccountAuth)
-            .Include(s => s.TwitchAccountScopes)
+            .Include(s => s.TwitchAccountAuth!)
+            .Include(s => s.TwitchAccountScopes!)
                 .ThenInclude(s => s.AuthorizationScope)
                     .ThenInclude(s => s.AuthorizationScopeSubscriptionTypes)
                         .ThenInclude(s => s.SubscriptionType)
@@ -84,8 +84,8 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         }
 
         var resp = await context.TwitchAccount
-            .Include(s => s.TwitchAccountAuth)
-            .Include(s => s.TwitchAccountScopes)
+            .Include(s => s.TwitchAccountAuth!)
+            .Include(s => s.TwitchAccountScopes!)
                 .ThenInclude(s => s.AuthorizationScope)
                     .ThenInclude(s => s.AuthorizationScopeSubscriptionTypes)
                         .ThenInclude(s => s.SubscriptionType)
@@ -261,5 +261,20 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         }
 
         return accounts;
+    }
+
+    public async Task<List<TwitchChatOverlaySettings>?> GetAllChatOverlaySettingsByBroadcasterId(string? broadcasterId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterId))
+        {
+            logger.LogDebug("No broadcaster id passed to fetch chat overlay settings method.");
+            return null;
+        }
+
+        var overlaySettings = await context.TwitchAccount.Include(s => s.TwitchChatOverlaySettings)
+            .FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        
+        return overlaySettings?.TwitchChatOverlaySettings?.ToList();
     }
 }

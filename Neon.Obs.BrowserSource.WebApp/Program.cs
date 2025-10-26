@@ -1,25 +1,25 @@
+using Neon.Core.Data.Twitch;
+using Neon.Core.Extensions;
 using Neon.Core.Services.Kafka;
 using Neon.Obs.BrowserSource.WebApp.Consumers;
 using Neon.Obs.BrowserSource.WebApp.Hubs;
 using Neon.Obs.BrowserSource.WebApp.Models;
-using Serilog;
+using Neon.Obs.BrowserSource.WebApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 
-builder.Services.AddLogging(s =>
-{
-    s.ClearProviders()
-        .AddSerilog(new LoggerConfiguration()
-            .ReadFrom.Configuration(builder.Configuration)
-            .CreateLogger());
-});
+builder.Services.ConfigureSerilog(builder.Configuration);
+builder.Services.ConfigureNeonDbContext(builder.Configuration);
 
 builder.Services.Configure<BaseKafkaConfig>(builder.Configuration.GetSection("BaseKafkaConfig"));
-
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
+
+builder.Services.AddScoped<ITwitchDbService, TwitchDbService>();
+builder.Services.AddScoped<ITwitchChatOverlayService, TwitchChatOverlayService>();
+
 builder.Services.AddHostedService<TwitchMessageConsumer>();
 
 builder.Services.AddRazorPages();

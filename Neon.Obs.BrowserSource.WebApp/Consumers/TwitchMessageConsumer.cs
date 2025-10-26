@@ -13,7 +13,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     private readonly BaseKafkaConfig _kafkaConfig = kafkaConfig.Value ?? throw new ArgumentNullException(nameof(kafkaConfig));
     
     private readonly string? Topic = "twitch-channel-processed-messages";
-    private readonly string? GroupId = "twitch-channel-processed-messages-group";
+    private readonly string? GroupId = "twitch-channel-processed-messages-group-local";
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -25,7 +25,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     private void InitializeChannelConsumer(CancellationToken ct = default)
     {
         var config = GetConsumerConfig();
-
+        logger.LogDebug("Attempting to subscribe to Kafka topic: {topic} with group ID: {groupId}", Topic, GroupId);
         kafkaService.SubscribeConsumerEvent(config, Topic, OnConsumerMessageReceived, OnConsumerException, ct);
     }
 
@@ -43,6 +43,7 @@ public class TwitchMessageConsumer(ILogger<TwitchMessageConsumer> logger, IServi
     {
         try
         {
+            logger.LogDebug("Received message from Kafka topic: {topic} | Partition: {partition} | Offset: {offset}", result.Topic, result.Partition, result.Offset);
             var message = result.Message.Value;
 
             if (message is null)

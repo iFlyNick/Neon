@@ -22,6 +22,7 @@ public class TwitchAccount : BaseModel
     public ICollection<TwitchAccountScope>? TwitchAccountScopes { get; set; }
     public TwitchAccountLoyalty? TwitchAccountLoyalty { get; set; }
     public ICollection<TwitchChannelCommand>? TwitchChannelCommands { get; set; }
+    public ICollection<TwitchChatOverlaySettings>? TwitchChatOverlaySettings { get; set; }
 }
 
 public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount>
@@ -44,6 +45,9 @@ public class TwitchAccountConfiguration : IEntityTypeConfiguration<TwitchAccount
         builder.HasOne(s => s.TwitchAccountLoyalty).WithOne(s => s.TwitchAccount).HasForeignKey<TwitchAccountLoyalty>(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(s => s.TwitchChannelCommands).WithOne(s => s.TwitchAccount).HasForeignKey(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(s => s.TwitchChatOverlaySettings).WithOne(s => s.TwitchAccount)
+            .HasForeignKey(s => s.TwitchAccountId).OnDelete(DeleteBehavior.Cascade);
+        
         //base model
         builder.Property(s => s.CreatedDate).HasColumnOrder(2).IsRequired();
         builder.Property(s => s.CreatedBy).HasColumnOrder(3).IsRequired().HasMaxLength(50);

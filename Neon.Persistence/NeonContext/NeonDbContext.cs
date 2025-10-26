@@ -12,10 +12,14 @@ public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(
     public DbSet<AppAccount> AppAccount { get; set; }
     public DbSet<AuthorizationScope> AuthorizationScope { get; set; }
     public DbSet<AuthorizationScopeSubscriptionType> AuthorizationScopeSubscriptionType { get; set; }
+    public DbSet<LoyaltyTracking> LoyaltyTracking { get; set; }
     public DbSet<SubscriptionType> SubscriptionType { get; set; }
     public DbSet<TwitchAccount> TwitchAccount { get; set; }
     public DbSet<TwitchAccountAuth> TwitchAccountAuth { get; set; }
+    public DbSet<TwitchAccountLoyalty> TwitchAccountLoyalty { get; set; }
     public DbSet<TwitchAccountScope> TwitchAccountScope { get; set; }
+    public DbSet<TwitchChannelCommand> TwitchChannelCommand { get; set; }
+    public DbSet<TwitchChatOverlaySettings> TwitchChatOverlaySettings { get; set; }
 
     //abstracts the fluentapi calls to the configuration classes to keep this class relatively clean
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>

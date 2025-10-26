@@ -15,6 +15,8 @@ connection.onclose(error => {
    tryReconnect();
 });
 
+let chatCounter = 0;
+
 async function tryReconnect() {
     while (true) {
         try {
@@ -37,30 +39,49 @@ async function tryReconnect() {
     } 
 }
 
+function getDefaultSettings() {
+    return {
+        chatStyle: "Boxes",
+        ignoreBotMessages: false,
+        ignoreCommandMessages: false,
+        useTwitchBadges: true,
+        chatDelayMilliseconds: 0,
+        alwaysKeepMessages: false,
+        chatMessageRemoveDelayMilliseconds: 60000,
+        fontFamily: 'calibri',
+        fontSize: 26
+    }
+}
+
 function appendChatMessage(message) {
-    var chatCounter = 0;
-
+    let chatSettings = fetchFromLocalStorage(`chatOverlaySettings-${message.channelId}`);
+    
+    if (chatSettings == null) {
+        chatSettings = getDefaultSettings();
+    } else {
+        chatSettings = JSON.parse(chatSettings);
+    }
+    
     var id = `chatid-${chatCounter}`;
-
     var badgeSpan = "";
 
-    if (message.chatterBadges != null && message.chatterBadges.length > 0) {
+    if (message.chatterBadges != null && message.chatterBadges.length > 0 && chatSettings.useTwitchBadges) {
         message.chatterBadges.forEach((badge) => {
             badgeSpan += `<span><img src="${badge.imageUrl}" alt="${badge.id}"/></span> `;
         });
     }
 
-    $("#chatapp").append(`<p id="${id}">${badgeSpan}<span style="color:${message.chatterColor}">${message.chatterName}</span>: <span class="twitch-message">${message.message}</span></p>`);
+    $("#chatapp").append(`<p id="${id}" style="font-family: ${chatSettings.fontFamily}; font-size: ${chatSettings.fontSize}px">${badgeSpan}<span style="color:${message.chatterColor}">${message.chatterName}:</span><span class="twitch-message">${message.message}</span></p>`);
 
     chatCounter++;
 
     $(`#${id}`)[0].scrollIntoView();
-
+    
     setTimeout(() => {
         $(`#${id}`).fadeOut(1000, function() {
             $(`#${id}`).remove();
         });
-    }, 60000);
+    }, chatSettings.chatMessageRemoveDelayMilliseconds);
 }
 
 async function startConnection() {
@@ -82,4 +103,54 @@ async function startConnection() {
     }
 }
 
+function syncOverlaySettings() {
+    try {
+        let channelId = new URLSearchParams(window.location.search.toLowerCase()).get("broadcasterid");
+        if (channelId === undefined || channelId === null) {
+            console.log("No channel id provided");
+            return;
+        }
+        //`/Index?handler=ChatOverlaySettings&broadcasterId=${encodeURIComponent(channelId)}`, { method: 'GET' })
+        //     .
+        fetch('/Index?handler=ChatOverlaySettings&broadcasterId=' + channelId)
+            .then(response => response.json())
+            .then(json => {
+                if (json === null)
+                    return;
+                
+                let cacheKey = `chatOverlaySettings-${channelId}`;
+                addToLocalStorage(cacheKey, JSON.stringify(json));
+            })
+            .catch(err => console.error(err.toString()));
+    }
+    catch (err) {
+        console.error(err);
+    }
+}
+
+function addToLocalStorage(key, value) {
+    if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+    }
+    
+    localStorage.setItem(key, value);
+}
+
+function removeFromLocalStorage(key) {
+    if (!localStorage.getItem(key)) {
+        return;
+    }
+    
+    localStorage.removeItem(key);
+}
+
+function fetchFromLocalStorage(key) {
+    if (!localStorage.getItem(key)) {
+        return null;
+    }
+    
+    return localStorage.getItem(key);
+}
+
+syncOverlaySettings();
 startConnection();
