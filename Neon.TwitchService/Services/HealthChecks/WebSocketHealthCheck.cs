@@ -20,14 +20,24 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
     {
         var wsServices = webSocketManager.GetWebSocketServices().ToList();
         
+        var wsStatuses = wsServices.Select(ws => new
+        {
+            SessionId = ws.GetSessionId(),
+            IsConnected = ws.IsConnected()
+        }).ToList();
+        
+        var wsStatusesJson = JsonSerializer.Serialize(wsStatuses);
+        
         string? msg;
+        HealthCheckResult healthCheckResult;
         
         if (wsServices.Count == 0)
         {
             logger.LogInformation("No websocket services found.");
             msg = "No websocket services found, returning healthy.";
-            await SendKafkaHealthCheckResult(msg, ct);
-            return await Task.FromResult(HealthCheckResult.Healthy(msg));
+            healthCheckResult = HealthCheckResult.Healthy(msg);
+            await SendKafkaHealthCheckResult(msg, healthCheckResult, ct);
+            return await Task.FromResult(healthCheckResult);
         }
         
         var unhealthyServices = wsServices.Where(ws => !ws.IsConnected()).ToList();
@@ -35,19 +45,21 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
         if (unhealthyServices.Count == 0)
         {
             logger.LogInformation("All websocket services are healthy. Total services: {serviceCount}", wsServices.Count);
-            msg = $"All websocket services are healthy. Total services: {wsServices.Count}";
-            await SendKafkaHealthCheckResult(msg, ct);
-            return await Task.FromResult(HealthCheckResult.Healthy(msg));
+            msg = $"All websocket services are healthy. Total services: {wsServices.Count} | Statuses: {wsStatusesJson}";
+            healthCheckResult = HealthCheckResult.Healthy(msg);
+            await SendKafkaHealthCheckResult(msg, healthCheckResult, ct);
+            return await Task.FromResult(healthCheckResult);
         }
         
         //unhealth services found, set status to degraded
         logger.LogWarning("{unhealthyCount} unhealthy websocket services found out of expected {wsCount} services.", unhealthyServices.Count, wsServices.Count);
-        msg = $"{unhealthyServices.Count} unhealthy websocket services found. Total services: {wsServices.Count}";
-        await SendKafkaHealthCheckResult(msg, ct);
-        return await Task.FromResult(unhealthyServices.Count == wsServices.Count ? HealthCheckResult.Unhealthy(msg) : HealthCheckResult.Degraded(msg));
+        msg = $"{unhealthyServices.Count} unhealthy websocket services found. Total services: {wsServices.Count} | Statuses: {wsStatusesJson}";
+        healthCheckResult = unhealthyServices.Count == wsServices.Count ? HealthCheckResult.Unhealthy(msg) : HealthCheckResult.Degraded(msg);
+        await SendKafkaHealthCheckResult(msg, healthCheckResult, ct);
+        return await Task.FromResult(healthCheckResult);
     }
 
-    private async Task SendKafkaHealthCheckResult(string description, CancellationToken ct = default)
+    private async Task SendKafkaHealthCheckResult(string description, HealthCheckResult overallResult, CancellationToken ct = default)
     {
         _config ??= new ProducerConfig { BootstrapServers = _baseKafkaSettings.BootstrapServers };
 
@@ -57,6 +69,7 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
             {
                 ServiceName = nameof(WebSocketHealthCheck),
                 Description = description,
+                OverallStatus = overallResult.Status,
                 Timestamp = DateTime.UtcNow
             };
 

@@ -12,7 +12,7 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting twitch service...");
-        await SubscribeAllActiveChannels(cancellationToken);
+        await SubscribeAllActiveChannels();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -21,37 +21,45 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
         return Task.CompletedTask;
     }
     
-    private async Task SubscribeAllActiveChannels(CancellationToken ct = default)
+    private async Task SubscribeAllActiveChannels()
     {
-        using var scope = serviceScopeFactory.CreateScope();
-        var dbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
-        
-        if (string.IsNullOrEmpty(_neonSettings.AppName))
+        try
         {
-            logger.LogCritical("AppName is null or empty. Cannot subscribe to channels.");
-            return;
-        }
-        
-        var subscribedAccounts = await dbService.GetAllSubscribedChannelAccounts(ct);
-        if (subscribedAccounts is null || subscribedAccounts.Count == 0)
-        {
-            logger.LogInformation("No subscribed accounts found.");
-            return;
-        }
-        
-        foreach (var account in subscribedAccounts)
-        {
-            if (string.IsNullOrEmpty(account.BroadcasterId))
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var scope = serviceScopeFactory.CreateScope();
+            var dbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
+            
+            if (string.IsNullOrEmpty(_neonSettings.AppName))
             {
-                logger.LogWarning("Broadcaster id is null or empty for account: {account}", account);
-                continue;
+                logger.LogCritical("AppName is null or empty. Cannot subscribe to channels.");
+                return;
             }
             
-            await webSocketManager.Subscribe(account.LoginName, ct);
-            logger.LogInformation("Subscribed to channel: {channelName}", account.LoginName);
+            var subscribedAccounts = await dbService.GetAllSubscribedChannelAccounts(cts.Token);
+            if (subscribedAccounts is null || subscribedAccounts.Count == 0)
+            {
+                logger.LogInformation("No subscribed accounts found.");
+                return;
+            }
             
-            //now connect the bot to the channel too
-            await webSocketManager.SubscribeUserToChat(_neonSettings.AppName, account.LoginName, ct);
+            foreach (var account in subscribedAccounts)
+            {
+                if (string.IsNullOrEmpty(account.BroadcasterId))
+                {
+                    logger.LogWarning("Broadcaster id is null or empty for account: {account}", account);
+                    continue;
+                }
+                
+                await webSocketManager.Subscribe(account.LoginName, cts.Token);
+                logger.LogInformation("Subscribed to channel: {channelName}", account.LoginName);
+                
+                //now connect the bot to the channel too
+                await webSocketManager.SubscribeUserToChat(_neonSettings.AppName, account.LoginName, cts.Token);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error subscribing to active channels on startup.");
         }
     }
 }

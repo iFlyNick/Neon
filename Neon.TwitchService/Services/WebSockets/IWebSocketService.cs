@@ -7,9 +7,11 @@ namespace Neon.TwitchService.Services.WebSockets;
 public interface IWebSocketService
 {
     void SetNeonTwitchBotSettings(NeonTwitchBotSettings? botSettings);
+    DateTimeOffset GetLastMessageReceived();
     bool IsConnected();
     bool? IsReconnectRequested();
     string? GetSessionId();
+    string? GetChatUser();
     Task ConnectAsync(string? wsUrl, CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);
     Task SubscribeChannelAsync(string? channel, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
@@ -19,4 +21,5 @@ public interface IWebSocketService
     event EventHandler<RevocationEventArgs>? OnRevocationEvent;
     event EventHandler<NotificationEventArgs>? OnNotificationEvent;
     event EventHandler<WebsocketClosedEventArgs>? OnWebsocketClosedEvent;
+    event EventHandler<KeepAliveFailureEventArgs>? OnKeepAliveFailureEvent;
 }

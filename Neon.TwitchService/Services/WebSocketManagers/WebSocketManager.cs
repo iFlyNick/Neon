@@ -33,6 +33,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
     private void OnNotificationEvent(object? sender, NotificationEventArgs e) => _ = HandleNotificationEvent(sender, e);
     private void OnNotificationChatEvent(object? sender, NotificationEventArgs e) => _ = HandleChatNotificationEvent(sender, e);
     private void OnWebsocketClosedEvent(object? sender, WebsocketClosedEventArgs e) => _ = HandleWebsocketClosedEvent(sender, e);
+    private void OnKeepAliveFailureEvent(object? sender, KeepAliveFailureEventArgs e) => _ = HandleKeepAliveFailureEvent(sender, e);
 
     private async Task HandleSessionReconnectEvent(object? sender, SessionReconnectEventArgs e)
     {
@@ -218,6 +219,44 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         }
     }
 
+    private async Task HandleKeepAliveFailureEvent(object? sender, KeepAliveFailureEventArgs e)
+    {
+        //keep alive failure event indicates the underlying ws has not sent a message within the configured time period. the existing ws should be disconnected and a new ws connection created as if it were starting fresh. this will include the base subscribe as well as the chat subscribe
+        
+        if (sender is not IWebSocketService wsService)
+        {
+            logger.LogDebug("OnSessionReconnectEvent: Sender is not IWebSocketService!");
+            return;
+        }
+        
+        var wsSessionId = wsService.GetSessionId();
+        var wsChatUser = wsService.GetChatUser();
+        var broadcasterName = _webSocketServices.FirstOrDefault(kvp => kvp.Value.Contains(wsService)).Key;
+        
+        if (_webSocketServices.TryGetValue(broadcasterName, out var wsList))
+        {
+            wsList.RemoveAll(s => s.GetSessionId() == wsSessionId);
+            await wsService.DisconnectAsync(CancellationToken.None);
+                
+            logger.LogDebug("Disconnected websocket session for broadcaster: {broadcasterName} | SessionId: {sessionId}", broadcasterName, wsSessionId);
+            
+            if (wsList.Count == 0)
+            {
+                logger.LogDebug("No more websocket services for broadcaster: {broadcasterName}, removing from dictionary", broadcasterName);
+                _webSocketServices.Remove(broadcasterName);
+            }
+        }
+        else
+            logger.LogWarning("Unable to find websocket service list for broadcaster: {broadcasterName}. Assuming all ws connections are now closed.", broadcasterName);
+        
+        //start new subscriptions now using the broadcaster name
+        using var ct = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (string.IsNullOrEmpty(wsChatUser))
+            await Subscribe(broadcasterName, ct.Token);
+        else 
+            await SubscribeUserToChat(_twitchAppSettings.AppName, wsChatUser, ct.Token);
+    }
+
     private async Task<IWebSocketService?> Resubscribe(string? wsUrl, string? broadcasterName, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(wsUrl) || string.IsNullOrEmpty(broadcasterName))
@@ -233,6 +272,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         wsService.OnRevocationEvent += OnRevocationEvent;
         wsService.OnNotificationEvent += OnNotificationEvent;
         wsService.OnWebsocketClosedEvent += OnWebsocketClosedEvent;
+        wsService.OnKeepAliveFailureEvent += OnKeepAliveFailureEvent;
         
         if (_webSocketServices.TryGetValue(broadcasterName, out var list))
             list.Add(wsService);
@@ -265,6 +305,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         wsService.OnRevocationEvent += OnRevocationEvent;
         wsService.OnNotificationEvent += OnNotificationEvent;
         wsService.OnWebsocketClosedEvent += OnWebsocketClosedEvent;
+        wsService.OnKeepAliveFailureEvent += OnKeepAliveFailureEvent;
 
         if (_webSocketServices.TryGetValue(broadcasterName, out var list))
             list.Add(wsService);
@@ -376,6 +417,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         wsService.OnRevocationEvent += OnRevocationEvent;
         wsService.OnNotificationEvent += OnNotificationChatEvent;
         wsService.OnWebsocketClosedEvent += OnWebsocketClosedEvent;
+        wsService.OnKeepAliveFailureEvent += OnKeepAliveFailureEvent;
 
         if (_webSocketServices.TryGetValue(userName, out var list))
             list.Add(wsService);
