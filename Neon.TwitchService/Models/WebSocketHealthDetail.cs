@@ -8,5 +8,5 @@ public class WebSocketHealthDetail
     public string? Channel { get; set; }
     public string? ChatUser { get; set; }
     public bool? IsConnected { get; set; }
-    public List<WebSocketSubscription>? Subscriptions { get; set; }
+    public List<WebSocketSubscriptionDetail>? Subscriptions { get; set; }
 }

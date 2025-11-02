@@ -3,13 +3,14 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Neon.Core.Services.Kafka;
+using Neon.Core.Services.Twitch.Authentication;
 using Neon.TwitchService.Models;
 using Neon.TwitchService.Models.Kafka;
 using Neon.TwitchService.Services.WebSocketManagers;
 
 namespace Neon.TwitchService.Services.HealthChecks;
 
-public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSocketManager webSocketManager, IKafkaService kafkaService, IOptions<BaseKafkaConfig> baseKafkaSettings) : IHealthCheck, IHealthCheckService
+public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IServiceScopeFactory serviceScopeFactory, IWebSocketManager webSocketManager, IKafkaService kafkaService, IOptions<BaseKafkaConfig> baseKafkaSettings) : IHealthCheck, IHealthCheckService
 {
     private const string KafkaTopic = "neon-health-checks";
     private readonly BaseKafkaConfig _baseKafkaSettings = baseKafkaSettings.Value ?? throw new ArgumentNullException(nameof(baseKafkaSettings));
@@ -18,13 +19,44 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IWebSock
     
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext? context, CancellationToken ct = default)
     {
-        var wsServices = webSocketManager.GetWebSocketServices().ToList();
+        using var scope = serviceScopeFactory.CreateScope();
+        var userTokenService = scope.ServiceProvider.GetRequiredService<IUserTokenService>();
         
-        var wsStatuses = wsServices.Select(ws => new
+        var wsServices = webSocketManager.GetWebSocketServices().ToList();
+
+        var wsStatuses = new List<WebSocketHealthDetail>();
+        
+        foreach (var ws in wsServices)
         {
-            SessionId = ws.GetSessionId(),
-            IsConnected = ws.IsConnected()
-        }).ToList();
+            var sessionId = ws.GetSessionId();
+            var channel = ws.GetChannel();
+            var chatUser = ws.GetChatUser();
+            var isConnected = ws.IsConnected();
+
+            var coreUser = string.IsNullOrEmpty(chatUser) ? channel : chatUser;
+            var userToken = await userTokenService.GetUserAuthTokenByBroadcasterId(coreUser, ct);
+
+            var subscriptions = await webSocketManager.GetSubscriptions(userToken, sessionId, chatUser, channel, ct);
+
+            var convertedSubList = subscriptions?.Select(s => new WebSocketSubscriptionDetail
+            {
+                Id = s.Id,
+                Status = s.Status,
+                Type = s.Type,
+                CreatedAt = s.CreatedAt,
+                ConnectedAt = s.Transport?.ConnectedAt,
+                DisconnectedAt = s.DisconnectedAt
+            }).ToList();
+            
+            wsStatuses.Add(new WebSocketHealthDetail
+            {
+                SessionId = sessionId,
+                Channel = channel,
+                ChatUser = chatUser,
+                IsConnected = isConnected,
+                Subscriptions = convertedSubList
+            });
+        }
         
         var wsStatusesJson = JsonSerializer.Serialize(wsStatuses);
         

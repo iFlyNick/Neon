@@ -1,4 +1,5 @@
-﻿using Neon.TwitchService.Services.WebSockets;
+﻿using Neon.Core.Models.Twitch.Helix.WebSockets;
+using Neon.TwitchService.Services.WebSockets;
 
 namespace Neon.TwitchService.Services.WebSocketManagers;
 
@@ -8,4 +9,6 @@ public interface IWebSocketManager
     Task Subscribe(string? userName, CancellationToken ct = default);
     Task SubscribeUserToChat(string? userName, string? broadcasterName, CancellationToken ct = default);
     Task Unsubscribe(string? broadcasterName, CancellationToken ct = default);
+
+    Task<List<WebSocketSubscription>?> GetSubscriptions(string? userAccessToken, string? sessionId, string? chatUserId, string? broadcasterUserId, CancellationToken ct = default);
 }

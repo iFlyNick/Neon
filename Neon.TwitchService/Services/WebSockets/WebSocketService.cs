@@ -26,6 +26,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     public string? GetChatUser() => _chatUser;
     private string? _chatUser;
     
+    public string? GetChannel() => _channel;
+    private string? _channel;
+    
     public bool? IsReconnectRequested() => _reconnectRequested;
     private bool _reconnectRequested;
 
@@ -263,7 +266,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId } 
         };
 
-        _chatUser = twitchChannelId;
+        _channel = twitchChannelId;
+        _chatUser = userId;
         
         logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, twitchChannelId);
         
@@ -341,6 +345,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId }
         };
 
+        _channel = channel;
+        
         logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, channel);
         
         foreach (var subscription in subscriptionTypes)

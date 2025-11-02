@@ -9,15 +9,13 @@ namespace Neon.Core.Services.Twitch.Authentication;
 
 public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings> twitchSettings, IHttpService httpService) : IOAuthService
 {
-    private readonly ILogger<OAuthService> _logger = logger;
     private readonly TwitchSettings TwitchSettings = twitchSettings.Value;
-    private readonly IHttpService _httpService = httpService;
 
     public async Task<OAuthValidationResponse?> ValidateOAuthToken(string? authToken, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(authToken))
         {
-            _logger.LogInformation("Invalid OAuth token request. AuthToken Provided: {authToken}", string.IsNullOrEmpty(authToken));
+            logger.LogInformation("Invalid OAuth token request. AuthToken Provided: {authToken}", string.IsNullOrEmpty(authToken));
             return null;
         }
 
@@ -26,11 +24,11 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
         try
         {
-            var resp = await _httpService.GetAsync(url, authHeader, null, ct);
+            var resp = await httpService.GetAsync(url, authHeader, null, ct);
 
             if (resp is null)
             {
-                _logger.LogError("Failed to validate OAuth token. Response is null.");
+                logger.LogError("Failed to validate OAuth token. Response is null.");
                 ArgumentNullException.ThrowIfNull(resp);
             }
 
@@ -38,7 +36,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
             if (!resp.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to validate OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
+                logger.LogError("Failed to validate OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
                 return null;
             }
 
@@ -48,7 +46,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to validate OAuth token.");
+            logger.LogError(ex, "Failed to validate OAuth token.");
             throw;
         }
     }
@@ -57,7 +55,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
     {
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
-            _logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: {helper}", clientId, string.IsNullOrEmpty(clientSecret) ? "no value passed" : "value passed");
+            logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: {helper}", clientId, string.IsNullOrEmpty(clientSecret) ? "no value passed" : "value passed");
             return null;
         }
 
@@ -73,11 +71,11 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
         try
         {
-            var resp = await _httpService.PostAsync(url, data, contentType, null, null, ct);
+            var resp = await httpService.PostAsync(url, data, contentType, null, null, ct);
 
             if (resp is null)
             {
-                _logger.LogError("Failed to get OAuth token. Response is null.");
+                logger.LogError("Failed to get OAuth token. Response is null.");
                 ArgumentNullException.ThrowIfNull(resp);
             }
 
@@ -85,7 +83,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
             if (!resp.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to get OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
+                logger.LogError("Failed to get OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
                 return null;
             }
 
@@ -95,7 +93,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get OAuth token.");
+            logger.LogError(ex, "Failed to get OAuth token.");
             throw;
         }
     }
@@ -104,7 +102,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
     {
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(userCode) || string.IsNullOrEmpty(redirectUri))
         {
-            _logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: omitted | UserCode: omitted | RedirectUri: {redirect}", clientId, redirectUri);
+            logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: omitted | UserCode: omitted | RedirectUri: {redirect}", clientId, redirectUri);
             return null;
         }
 
@@ -122,11 +120,11 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
         try
         {
-            var resp = await _httpService.PostAsync(url, data, contentType, null, null, ct);
+            var resp = await httpService.PostAsync(url, data, contentType, null, null, ct);
 
             if (resp is null)
             {
-                _logger.LogError("Failed to get OAuth token. Response is null.");
+                logger.LogError("Failed to get OAuth token. Response is null.");
                 ArgumentNullException.ThrowIfNull(resp);
             }
 
@@ -135,7 +133,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
             if (!resp.IsSuccessStatusCode)
             {
                 //this hides 401 errors so need to fix this
-                _logger.LogError("Failed to get OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
+                logger.LogError("Failed to get OAuth token. Status code: {statusCode} | Body: {message}", resp.StatusCode, content);
                 return null;
             }
 
@@ -145,7 +143,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get OAuth token.");
+            logger.LogError(ex, "Failed to get OAuth token.");
             throw;
         }
     }
@@ -154,7 +152,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
     {
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(refreshToken))
         {
-            _logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: omitted | RefreshToken: omitted", clientId);
+            logger.LogInformation("Invalid OAuth token request. ClientId: {clientId} | ClientSecret: omitted | RefreshToken: omitted", clientId);
             return null;
         }
 
@@ -171,11 +169,11 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
 
         try
         {
-            var resp = await _httpService.PostAsync(url, data, contentType, null, null, ct);
+            var resp = await httpService.PostAsync(url, data, contentType, null, null, ct);
 
             if (resp is null)
             {
-                _logger.LogError("Failed to get OAuth token from refresh token. Response is null.");
+                logger.LogError("Failed to get OAuth token from refresh token. Response is null.");
                 ArgumentNullException.ThrowIfNull(resp);
             }
 
@@ -184,7 +182,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
             if (!resp.IsSuccessStatusCode)
             {
                 //this hides 401 errors so need to fix this
-                _logger.LogError("Failed to get OAuth token from refresh token. Status code: {statusCode} | Body: {message}", resp?.StatusCode, content);
+                logger.LogError("Failed to get OAuth token from refresh token. Status code: {statusCode} | Body: {message}", resp?.StatusCode, content);
                 return null;
             }
 
@@ -194,7 +192,7 @@ public class OAuthService(ILogger<OAuthService> logger, IOptions<TwitchSettings>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get OAuth token from refresh token.");
+            logger.LogError(ex, "Failed to get OAuth token from refresh token.");
             throw;
         }
     }

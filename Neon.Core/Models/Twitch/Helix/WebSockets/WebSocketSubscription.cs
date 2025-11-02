@@ -1,36 +1,26 @@
-﻿using System.Text.Json.Serialization;
-using Neon.Core.Models.Twitch.EventSub;
+﻿using Neon.Core.Models.Twitch.EventSub;
+using Newtonsoft.Json;
 
 namespace Neon.Core.Models.Twitch.Helix.WebSockets;
 
 public class WebSocketSubscription
 {
-    [JsonPropertyName("id")]
+    [JsonProperty("id")]
     public string? Id { get; set; }
-    [JsonPropertyName("status")]
+    [JsonProperty("status")]
     public string? Status { get; set; }
-    [JsonPropertyName("type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
-    [JsonPropertyName("version")]
+    [JsonProperty("version")]
     public string? Version { get; set; }
-    [JsonPropertyName("condition")]
+    [JsonProperty("condition")]
     public Condition? Condition { get; set; }
-    [JsonPropertyName("created_at")]
+    [JsonProperty("created_at")]
     public string? CreatedAt { get; set; }
-    [JsonPropertyName("transport")]
+    [JsonProperty("transport")]
     public Transport? Transport { get; set; }
-    [JsonPropertyName("disconnected_at")]
+    [JsonProperty("disconnected_at")]
     public string? DisconnectedAt { get; set; }
-    [JsonPropertyName("cost")]
+    [JsonProperty("cost")]
     public int? Cost { get; set; }
-    [JsonPropertyName("total")]
-    public int? Total { get; set; }
-    [JsonPropertyName("total_cost")]
-    public int? TotalCost { get; set; }
-    [JsonPropertyName("max_total_cost")]
-    public int? MaxTotalCost { get; set; }
-    [JsonPropertyName("pagination")]
-    public Pagination? Pagination { get; set; }
-    [JsonPropertyName("cursor")]
-    public string? Cursor { get; set; }
 }

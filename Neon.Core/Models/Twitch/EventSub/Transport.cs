@@ -8,4 +8,6 @@ public class Transport
     public string? Method { get; set; }
     [JsonProperty("session_id")]
     public string? SessionId { get; set; }
+    [JsonProperty("connected_at")]
+    public string? ConnectedAt { get; set; }
 }

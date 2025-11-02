@@ -3,8 +3,10 @@ using Microsoft.Extensions.Options;
 using Neon.Core.Data.Twitch;
 using Neon.Core.Models;
 using Neon.Core.Models.Twitch;
+using Neon.Core.Models.Twitch.Helix.WebSockets;
 using Neon.Core.Services.Kafka;
 using Neon.Core.Services.Twitch.Authentication;
+using Neon.Core.Services.Twitch.Helix;
 using Neon.TwitchService.Events;
 using Neon.TwitchService.Models;
 using Neon.TwitchService.Models.Kafka;
@@ -13,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace Neon.TwitchService.Services.WebSocketManagers;
 
-public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKafkaConfig> baseKafkaSettings, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOAuthService oAuthService, IOptions<NeonSettings> twitchAppSettings) : IWebSocketManager
+public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKafkaConfig> baseKafkaSettings, IServiceScopeFactory serviceScopeFactory, IKafkaService kafkaService, IOptions<NeonSettings> twitchAppSettings) : IWebSocketManager
 {
     private readonly BaseKafkaConfig _baseKafkaConfig = baseKafkaSettings.Value ?? throw new ArgumentNullException(nameof(baseKafkaSettings));
     private readonly NeonSettings _twitchAppSettings = twitchAppSettings.Value ?? throw new ArgumentNullException(nameof(twitchAppSettings));
@@ -317,11 +319,11 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat
         //TODO: dont do this here :)
         var twitchDbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
-        var broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
+        var userTokenService = scope.ServiceProvider.GetRequiredService<IUserTokenService>();
+        
         var appAccount = await twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
 
-        if (broadcasterAccount is null || broadcasterAccount.TwitchAccountAuth is null || appAccount is null)
-            throw new Exception("Broadcaster account is null, broadcaster account auth is null, or app account is null!");
+        ArgumentNullException.ThrowIfNull(appAccount);
 
         var appTwitchAccount = new NeonTwitchBotSettings
         {
@@ -333,31 +335,11 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         };
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
-
-        var oAuthValidation = await oAuthService.ValidateOAuthToken(broadcasterAccount.TwitchAccountAuth.AccessToken, ct);
-
-        //user auth failed, need to re-auth
-        if (oAuthValidation is null)
-        {
-            logger.LogDebug("Access token needs refreshed or is invalid for account: {broadcasterName}", broadcasterName);
-            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, broadcasterAccount.TwitchAccountAuth.RefreshToken, ct);
-
-            if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
-            {
-                logger.LogError("Failed to refresh access token for account: {broadcasterName}", broadcasterName);
-                return;
-            }
-
-            broadcasterAccount.TwitchAccountAuth.AccessToken = oAuthResp.AccessToken;
-
-            //update db with new access token
-            _ = await twitchDbService.UpsertTwitchAccountAsync(broadcasterAccount, ct);
-        }
         
-        logger.LogDebug("User auth token is now valid for account: {broadcasterName}", broadcasterName);
+        await userTokenService.EnsureUserTokenValidByBroadcasterName(broadcasterName, ct);
 
         //reset the broadcaster account to ensure we have the latest data and decrypted access token info
-        broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
+        var broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
         
         if (broadcasterAccount is null || broadcasterAccount.TwitchAccountAuth is null)
         {
@@ -429,14 +411,16 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         //use oauth to connect to broadcaster channel to start receiving events from twitch chat
         //TODO: dont do this here :)
         var twitchDbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
+        var userTokenService = scope.ServiceProvider.GetRequiredService<IUserTokenService>();
+        
         var broadcasterAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(broadcasterName, ct);
         var appAccount = await twitchDbService.GetAppAccountAsync(_twitchAppSettings.AppName, ct);
-        var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
+        //var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
 
-        if (appAccount is null || userAccount is null || userAccount.TwitchAccountAuth is null || broadcasterAccount is null || broadcasterAccount.TwitchAccountAuth is null)
+        if (appAccount is null || broadcasterAccount is null || broadcasterAccount.TwitchAccountAuth is null)
         {
-            logger.LogError("Unable to find app account or user account. AppAccount: {appAccount}, UserAccount: {userAccount}, BroadcasterAccount: {broadcasterAccount}", appAccount?.AppName, userAccount?.LoginName, broadcasterAccount?.LoginName);
-            throw new Exception("App account is null, user account is null, or broadcaster account is null!");
+            logger.LogError("Unable to find app account or user account. AppAccount: {appAccount}, BroadcasterAccount: {broadcasterAccount}", appAccount?.AppName, broadcasterAccount?.LoginName);
+            throw new Exception("App account is null or broadcaster account is null!");
         }
 
         var appTwitchAccount = new NeonTwitchBotSettings
@@ -450,25 +434,10 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
 
         wsService.SetNeonTwitchBotSettings(appTwitchAccount);
 
-        var oAuthValidation = await oAuthService.ValidateOAuthToken(userAccount.TwitchAccountAuth.AccessToken, ct);
-
-        //app auth failed, need to re-auth
-        if (oAuthValidation is null)
-        {
-            logger.LogDebug("Access token needs refreshed or is invalid for account: {loginName}", userAccount.LoginName);
-            var oAuthResp = await oAuthService.GetUserAuthTokenFromRefresh(appAccount.ClientId, appAccount.ClientSecret, userAccount.TwitchAccountAuth.RefreshToken, ct);
-
-            if (oAuthResp is null || string.IsNullOrEmpty(oAuthResp.AccessToken))
-            {
-                logger.LogError("Failed to refresh access token for account: {loginName}", userAccount.LoginName);
-                return;
-            }
-
-            userAccount.TwitchAccountAuth.AccessToken = oAuthResp.AccessToken;
-
-            //update db with new access token
-            _ = await twitchDbService.UpdateTwitchAccountAuthAsync(userAccount.BroadcasterId, userAccount.TwitchAccountAuth.AccessToken, ct);
-        }
+        await userTokenService.EnsureUserTokenValidByBroadcasterName(userName, ct);
+        
+        var userAccount = await twitchDbService.GetTwitchAccountByBroadcasterName(userName, ct);
+        ArgumentNullException.ThrowIfNull(userAccount);
 
         var dbSubscriptions =
             userAccount.TwitchAccountScopes?.Where(s => s.AuthorizationScope is not null)
@@ -512,5 +481,56 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         // _webSocketServices.Remove(broadcasterName);
         //
         // logger.LogDebug("Unsubscribed from {broadcasterName}", broadcasterName);
+    }
+
+    public async Task<List<WebSocketSubscription>?> GetSubscriptions(string? userAccessToken, string? sessionId, string? chatUserId, string? broadcasterUserId, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(userAccessToken);
+        
+        using var scope = serviceScopeFactory.CreateScope();
+
+        var helixService = scope.ServiceProvider.GetRequiredService<IHelixService>();
+        var subscriptions = await helixService.GetWebSocketSubscriptions(userAccessToken, ct);
+
+        if (subscriptions is null || subscriptions.Count == 0)
+        {
+            logger.LogDebug("No websocket subscriptions found for sessionId: {sessionId}", sessionId);
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(sessionId) && string.IsNullOrEmpty(chatUserId) && string.IsNullOrEmpty(broadcasterUserId))
+            return subscriptions;
+
+        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(chatUserId) && !string.IsNullOrEmpty(broadcasterUserId))
+        {
+            //return double filtered list
+            var filteredBySessionAndChatUser = subscriptions.Where(s => s.Transport?.SessionId == sessionId && s.Condition?.UserId == chatUserId && s.Condition?.BroadcasterUserId == broadcasterUserId);
+            
+            return filteredBySessionAndChatUser.ToList();
+        }
+        
+        //filter the list out to only include those that match the sessionId or chatUserId
+        var retList = new List<WebSocketSubscription>();
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            var filteredBySession = subscriptions.Where(s => s.Transport?.SessionId == sessionId).ToList();
+            
+            retList.AddRange(filteredBySession);
+        }
+
+        if (!string.IsNullOrEmpty(broadcasterUserId))
+        {
+            var filteredByChatUser = subscriptions.Where(s => s.Condition?.BroadcasterUserId == broadcasterUserId).ToList();
+            retList.AddRange(filteredByChatUser);
+        }
+        
+        if (!string.IsNullOrEmpty(chatUserId))
+        {
+            var filteredByChatUser = subscriptions.Where(s => s.Condition?.UserId == chatUserId).ToList();
+            retList.AddRange(filteredByChatUser);
+        }
+
+        return retList.DistinctBy(s => s.Id).ToList();
     }
 }

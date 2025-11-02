@@ -12,6 +12,7 @@ public interface IWebSocketService
     bool? IsReconnectRequested();
     string? GetSessionId();
     string? GetChatUser();
+    string? GetChannel();
     Task ConnectAsync(string? wsUrl, CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);
     Task SubscribeChannelAsync(string? channel, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
