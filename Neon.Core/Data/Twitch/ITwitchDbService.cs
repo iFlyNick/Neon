@@ -13,6 +13,7 @@ public interface ITwitchDbService
     Task<int> UpsertTwitchAccountAsync(TwitchAccount? account, CancellationToken ct = default);
     Task<int> UpdateTwitchAccountAuthAsync(string? broadcasterId, string? accessToken, CancellationToken ct = default);
     Task<List<TwitchAccount>?> GetAllSubscribedChannelAccounts(CancellationToken ct = default);
+    Task<List<string>?> GetAllSubscribedChannelBroadcasterIds(CancellationToken ct = default);
     Task<List<TwitchChatOverlaySettings>?> GetAllChatOverlaySettingsByBroadcasterId(string? broadcasterId,
         CancellationToken ct = default);
 }

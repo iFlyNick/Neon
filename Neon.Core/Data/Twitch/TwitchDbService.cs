@@ -263,6 +263,18 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         return accounts;
     }
 
+    public async Task<List<string>?> GetAllSubscribedChannelBroadcasterIds(CancellationToken ct = default)
+    {
+        var accountIds = await context.TwitchAccount.AsNoTracking().Where(s => !string.IsNullOrEmpty(s.LoginName) && !(s.IsAuthorizationRevoked ?? false)).Select(s => s.BroadcasterId!).ToListAsync(ct);
+
+        if (accountIds.Count != 0) 
+            return accountIds;
+        
+        logger.LogWarning("No subscribed twitch accounts found.");
+        return null;
+
+    }
+
     public async Task<List<TwitchChatOverlaySettings>?> GetAllChatOverlaySettingsByBroadcasterId(string? broadcasterId,
         CancellationToken ct = default)
     {

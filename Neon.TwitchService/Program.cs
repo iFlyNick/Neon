@@ -7,6 +7,7 @@ using Neon.Core.Services.Kafka;
 using Neon.TwitchService.Models.Kafka;
 using Neon.TwitchService.Services;
 using Neon.TwitchService.Services.HealthChecks;
+using Neon.TwitchService.Services.OAuthValidations;
 using Neon.TwitchService.Services.WebSocketManagers;
 using Neon.TwitchService.Services.WebSockets;
 using Neon.TwitchService.Workers;
@@ -37,6 +38,9 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.AddSingleton<IHealthCheckService, WebSocketHealthCheck>();
         services.AddSingleton<HealthCheckWorker>();
+
+        services.AddScoped<IOAuthValidationService, OAuthValidationService>();
+        services.AddSingleton<OAuthValidationWorker>();
         
         services.AddHostedService<StartupService>();
     })
@@ -49,6 +53,12 @@ host.Services.UseScheduler(s =>
         var worker = host.Services.GetRequiredService<HealthCheckWorker>();
         await worker.InvokeAsync();
     }).EveryMinute().PreventOverlapping(nameof(Program)).RunOnceAtStart();
+
+    s.ScheduleAsync(async () =>
+    {
+        var worker = host.Services.GetRequiredService<OAuthValidationWorker>();
+        await worker.InvokeAsync();
+    }).Hourly().PreventOverlapping("OAuthValidationWorker").RunOnceAtStart();
 });
 
 await host.RunAsync();
