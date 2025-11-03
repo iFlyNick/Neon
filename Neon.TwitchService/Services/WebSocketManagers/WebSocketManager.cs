@@ -73,10 +73,10 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             
             //now that the new ws session has been created, the old one can be disconnected and removed
             //the old ws cant be closed until the new one has received the session welcome message from twitch. need to loop and wait for this to happen, or timeout after 30 seconds when it will no longer be allowed
-            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             while (!timeoutCts.IsCancellationRequested)
             {
-                if (newWsService.IsConnected()) 
+                if (newWsService.IsConnected() && !string.IsNullOrEmpty(newWsService.GetSessionId())) 
                     break;
                 
                 logger.LogDebug("Waiting for new websocket session to connect for broadcaster: {broadcasterName}", broadcasterName);
@@ -84,6 +84,12 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             }
             
             logger.LogDebug("New websocket session connected for broadcaster: {broadcasterName} | New SessionId: {newSessionId}", broadcasterName, newWsService.GetSessionId());
+
+            if (newWsService.GetSessionId() == oldSessionId)
+            {
+                logger.LogDebug("***New websocket session id is the same as the old session id for broadcaster: {broadcasterName}. No need to disconnect old session.***", broadcasterName);
+                return;
+            }
 
             //update the ws service list for the broadcaster
             if (_webSocketServices.TryGetValue(broadcasterName, out var wsList))
@@ -256,7 +262,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         if (string.IsNullOrEmpty(wsChatUser))
             await Subscribe(broadcasterName, ct.Token);
         else 
-            await SubscribeUserToChat(_twitchAppSettings.AppName, wsChatUser, ct.Token);
+            await SubscribeUserToChat(_twitchAppSettings.AppName, broadcasterName, ct.Token);
     }
 
     private async Task<IWebSocketService?> Resubscribe(string? wsUrl, string? broadcasterName, CancellationToken ct = default)
