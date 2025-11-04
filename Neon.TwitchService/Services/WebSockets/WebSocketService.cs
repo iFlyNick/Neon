@@ -23,9 +23,11 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     public string? GetSessionId() => _sessionId;
     private string? _sessionId;
 
+    public void SetChatUser(string? chatUser) => _chatUser = chatUser;
     public string? GetChatUser() => _chatUser;
     private string? _chatUser;
     
+    public void SetChannel(string? channel) => _channel = channel;
     public string? GetChannel() => _channel;
     private string? _channel;
     

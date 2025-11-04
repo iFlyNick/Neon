@@ -11,7 +11,9 @@ public interface IWebSocketService
     bool IsConnected();
     bool? IsReconnectRequested();
     string? GetSessionId();
+    void SetChatUser(string? chatUser);
     string? GetChatUser();
+    void SetChannel(string? channel);
     string? GetChannel();
     Task ConnectAsync(string? wsUrl, CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);

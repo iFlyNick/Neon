@@ -55,6 +55,8 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             
             var oldSessionId = wsService.GetSessionId();
             var broadcasterName = _webSocketServices.FirstOrDefault(kvp => kvp.Value.Contains(wsService)).Key;
+            var broadcasterId = wsService.GetChannel();
+            var chatUser = wsService.GetChatUser();
             
             if (string.IsNullOrEmpty(broadcasterName))
             {
@@ -63,7 +65,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             }
             
             //create new ws service using the reconnect url for the given broadcaster
-            var newWsService = await Resubscribe(e.Session.ReconnectUrl, broadcasterName);
+            var newWsService = await Resubscribe(e.Session.ReconnectUrl, broadcasterId, chatUser);
 
             if (newWsService is null)
             {
@@ -84,29 +86,27 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             }
             
             logger.LogDebug("New websocket session connected for broadcaster: {broadcasterName} | New SessionId: {newSessionId}", broadcasterName, newWsService.GetSessionId());
-
+            
             if (newWsService.GetSessionId() == oldSessionId)
             {
                 logger.LogDebug("***New websocket session id is the same as the old session id for broadcaster: {broadcasterName}. No need to disconnect old session.***", broadcasterName);
-                return;
-            }
-
-            //update the ws service list for the broadcaster
-            if (_webSocketServices.TryGetValue(broadcasterName, out var wsList))
-            {
-                wsList.RemoveAll(s => s.GetSessionId() == oldSessionId);
-                await wsService.DisconnectAsync(CancellationToken.None);
                 
-                logger.LogDebug("Disconnected old websocket session for broadcaster: {broadcasterName} | Old SessionId: {oldSessionId} | New SessionId: {newSessionId}", broadcasterName, oldSessionId, newWsService.GetSessionId());
-
-                if (wsList.Count == 0)
+                if (_webSocketServices.TryGetValue(broadcasterName, out var wsList1))
                 {
-                    logger.LogDebug("No more websocket services for broadcaster: {broadcasterName}, removing from dictionary", broadcasterName);
-                    _webSocketServices.Remove(broadcasterName);
+                    logger.LogDebug("Removing old websocket session from list for broadcaster: {broadcasterName} | Old SessionId: {oldSessionId}", broadcasterName, oldSessionId);
+                    wsList1.RemoveAll(s => s.GetSessionId() == oldSessionId);
+                    logger.LogDebug("Adding new websocket session to list for broadcaster: {broadcasterName} | New SessionId: {newSessionId}", broadcasterName, newWsService.GetSessionId());
+                    wsList1.Add(newWsService);
+                }
+                else
+                {
+                    logger.LogDebug("Creating new websocket service list for broadcaster: {broadcasterName} | New SessionId: {newSessionId}", broadcasterName, newWsService.GetSessionId());
+                    _webSocketServices[broadcasterName] = [newWsService];
                 }
             }
-            else
-                logger.LogWarning("Unable to find websocket service list for broadcaster: {broadcasterName} when trying to remove old session id: {oldSessionId}", broadcasterName, oldSessionId);
+            
+            logger.LogDebug("Disconnecting old websocket session for broadcaster: {broadcasterName} | Old SessionId: {oldSessionId}", broadcasterName, oldSessionId);
+            await wsService.DisconnectAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -265,11 +265,11 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             await SubscribeUserToChat(_twitchAppSettings.AppName, broadcasterName, ct.Token);
     }
 
-    private async Task<IWebSocketService?> Resubscribe(string? wsUrl, string? broadcasterName, CancellationToken ct = default)
+    private async Task<IWebSocketService?> Resubscribe(string? wsUrl, string? broadcasterId, string? chatUser, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(wsUrl) || string.IsNullOrEmpty(broadcasterName))
+        if (string.IsNullOrEmpty(wsUrl) || string.IsNullOrEmpty(broadcasterId))
         {
-            logger.LogWarning("Resubscribe called with null or empty wsUrl or broadcasterName. wsUrl: {wsUrl}, broadcasterName: {broadcasterName}", wsUrl, broadcasterName);
+            logger.LogWarning("Resubscribe called with null or empty wsUrl or broadcasterId. wsUrl: {wsUrl}, broadcasterId: {broadcasterId}", wsUrl, broadcasterId);
             return null;
         }
 
@@ -282,10 +282,8 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         wsService.OnWebsocketClosedEvent += OnWebsocketClosedEvent;
         wsService.OnKeepAliveFailureEvent += OnKeepAliveFailureEvent;
         
-        if (_webSocketServices.TryGetValue(broadcasterName, out var list))
-            list.Add(wsService);
-        else 
-            _webSocketServices[broadcasterName] = [wsService];
+        wsService.SetChannel(broadcasterId);
+        wsService.SetChatUser(chatUser);
         
         await wsService.ConnectAsync(wsUrl, ct);
         
