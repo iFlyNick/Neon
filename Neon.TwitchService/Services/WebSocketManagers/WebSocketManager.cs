@@ -238,7 +238,10 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         }
         
         var wsSessionId = wsService.GetSessionId();
+        var wsChannel = wsService.GetChannel();
         var wsChatUser = wsService.GetChatUser();
+        
+        //note - the broadcaster name here could be the BOT user if the wsChatUser is not null. the wsChannel is the CORRECT twitch broadcaster channel though. broadcaster name is used for the dictionary, but resub will need to use the right values!
         var broadcasterName = _webSocketServices.FirstOrDefault(kvp => kvp.Value.Contains(wsService)).Key;
         
         if (_webSocketServices.TryGetValue(broadcasterName, out var wsList))
@@ -258,11 +261,13 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             logger.LogWarning("Unable to find websocket service list for broadcaster: {broadcasterName}. Assuming all ws connections are now closed.", broadcasterName);
         
         //start new subscriptions now using the broadcaster name
+        //see note above about broadcaster name. from this point on to be clear, subscribe will use the channel, and subscribe user to chat will also use the channel
+        //that channel is the channel that was alive on the old websocket and is not tied back to the bot should it have been the one to be disconnected
         using var ct = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         if (string.IsNullOrEmpty(wsChatUser))
-            await Subscribe(broadcasterName, ct.Token);
+            await Subscribe(wsChannel, ct.Token);
         else 
-            await SubscribeUserToChat(_twitchAppSettings.AppName, broadcasterName, ct.Token);
+            await SubscribeUserToChat(_twitchAppSettings.AppName, wsChannel, ct.Token);
     }
 
     private async Task<IWebSocketService?> Resubscribe(string? wsUrl, string? broadcasterId, string? chatUser, CancellationToken ct = default)
