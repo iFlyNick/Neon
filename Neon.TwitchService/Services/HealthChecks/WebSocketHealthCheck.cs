@@ -29,14 +29,14 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IService
         foreach (var ws in wsServices)
         {
             var sessionId = ws.GetSessionId();
-            var channel = ws.GetChannel();
-            var chatUser = ws.GetChatUser();
+            var broadcasterId = ws.GetBroadcasterId();
+            var chatterId = ws.GetChatterId();
             var isConnected = ws.IsConnected();
 
-            var coreUser = string.IsNullOrEmpty(chatUser) ? channel : chatUser;
+            var coreUser = string.IsNullOrEmpty(chatterId) ? broadcasterId : chatterId;
             var userToken = await userTokenService.GetUserAuthTokenByBroadcasterId(coreUser, ct);
 
-            var subscriptions = await webSocketManager.GetSubscriptions(userToken, sessionId, chatUser, channel, ct);
+            var subscriptions = await webSocketManager.GetSubscriptions(userToken, sessionId, chatterId, broadcasterId, ct);
 
             var convertedSubList = subscriptions?.Select(s => new WebSocketSubscriptionDetail
             {
@@ -51,8 +51,8 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IService
             wsStatuses.Add(new WebSocketHealthDetail
             {
                 SessionId = sessionId,
-                Channel = channel,
-                ChatUser = chatUser,
+                BroadcasterId = broadcasterId,
+                ChatterId = chatterId,
                 IsConnected = isConnected,
                 Subscriptions = convertedSubList
             });

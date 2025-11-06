@@ -42,6 +42,13 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
                 return;
             }
             
+            var botChatAccount = await dbService.GetTwitchAccountByBroadcasterName(_neonSettings.AppName, cts.Token);
+            if (botChatAccount is null)
+            {
+                logger.LogCritical("Bot chat account not found for app name: {appName}", _neonSettings.AppName);
+                return;
+            }
+            
             foreach (var account in subscribedAccounts)
             {
                 if (string.IsNullOrEmpty(account.BroadcasterId))
@@ -50,11 +57,12 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
                     continue;
                 }
                 
-                await webSocketManager.Subscribe(account.LoginName, cts.Token);
-                logger.LogInformation("Subscribed to channel: {channelName}", account.LoginName);
+                await webSocketManager.Subscribe(account.BroadcasterId, cts.Token);
+                logger.LogInformation("Subscribed to channel: {channelName}", account.BroadcasterId);
                 
                 //now connect the bot to the channel too
-                await webSocketManager.SubscribeUserToChat(_neonSettings.AppName, account.LoginName, cts.Token);
+                await webSocketManager.SubscribeUserToChat(botChatAccount.BroadcasterId, account.BroadcasterId, cts.Token);
+                logger.LogInformation("Subscribed bot to chat for channel: {channelName}", account.BroadcasterId);
             }
         }
         catch (Exception ex)

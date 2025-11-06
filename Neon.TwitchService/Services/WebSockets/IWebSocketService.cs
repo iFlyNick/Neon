@@ -11,14 +11,14 @@ public interface IWebSocketService
     bool IsConnected();
     bool? IsReconnectRequested();
     string? GetSessionId();
-    void SetChatUser(string? chatUser);
-    string? GetChatUser();
-    void SetChannel(string? channel);
-    string? GetChannel();
+    void SetChatterId(string? chatterId);
+    string? GetChatterId();
+    void SetBroadcasterId(string? broadcasterId);
+    string? GetBroadcasterId();
     Task ConnectAsync(string? wsUrl, CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);
-    Task SubscribeChannelAsync(string? channel, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
-    Task SubscribeChannelChatAsync(string? twitchChannelId, string? userId, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
+    Task SubscribeChannelAsync(string? broadcasterId, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
+    Task SubscribeChannelChatAsync(string? broadcasterId, string? chatterId, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
  
     event EventHandler<SessionReconnectEventArgs>? OnReconnectEvent;
     event EventHandler<RevocationEventArgs>? OnRevocationEvent;

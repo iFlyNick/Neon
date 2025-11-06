@@ -23,13 +23,13 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
     public string? GetSessionId() => _sessionId;
     private string? _sessionId;
 
-    public void SetChatUser(string? chatUser) => _chatUser = chatUser;
-    public string? GetChatUser() => _chatUser;
-    private string? _chatUser;
+    public void SetChatterId(string? chatterId) => _chatterId = chatterId;
+    public string? GetChatterId() => _chatterId;
+    private string? _chatterId;
     
-    public void SetChannel(string? channel) => _channel = channel;
-    public string? GetChannel() => _channel;
-    private string? _channel;
+    public void SetBroadcasterId(string? broadcasterId) => _broadcasterId = broadcasterId;
+    public string? GetBroadcasterId() => _broadcasterId;
+    private string? _broadcasterId;
     
     public bool? IsReconnectRequested() => _reconnectRequested;
     private bool _reconnectRequested;
@@ -233,7 +233,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         OnNotificationReceived(twitchMessage);
     }
     
-    public async Task SubscribeChannelChatAsync(string? twitchChannelId, string? userId, string? accessToken, List<SubscriptionType>? subscriptionTypes, CancellationToken ct = default)
+    public async Task SubscribeChannelChatAsync(string? broadcasterId, string? chatterId, string? accessToken, List<SubscriptionType>? subscriptionTypes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(_botSettings, nameof(_botSettings));
 
@@ -244,15 +244,15 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             ArgumentException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
-        if (string.IsNullOrEmpty(twitchChannelId))
+        if (string.IsNullOrEmpty(broadcasterId))
         {
-            logger.LogWarning("TwitchChannelId is null or empty. Skipping subscription");
+            logger.LogWarning("broadcasterId is null or empty. Skipping subscription");
             return;
         }
 
-        if (string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(chatterId))
         {
-            logger.LogWarning("UserId is null or empty. Can't subscribe to channel chat without defining the user to connect as!");
+            logger.LogWarning("ChatterId is null or empty. Can't subscribe to channel chat without defining the user to connect as!");
             return;
         }
 
@@ -268,14 +268,14 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId } 
         };
 
-        _channel = twitchChannelId;
-        _chatUser = userId;
+        _broadcasterId = broadcasterId;
+        _chatterId = chatterId;
         
-        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, twitchChannelId);
+        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, broadcasterId);
         
         foreach (var subscription in subscriptionTypes)
         {
-            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, twitchChannelId);
+            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, broadcasterId);
             
             var message = new Message
             {
@@ -287,8 +287,8 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
                         Version = subscription.Version,
                         Condition = new Condition
                         {
-                            BroadcasterUserId = twitchChannelId,
-                            UserId = userId
+                            BroadcasterUserId = broadcasterId,
+                            UserId = chatterId
                         },
                         Transport = new Transport
                         {
@@ -318,7 +318,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
     }
 
-    public async Task SubscribeChannelAsync(string? channel, string? accessToken, List<SubscriptionType>? subscriptionTypes, CancellationToken ct = default)
+    public async Task SubscribeChannelAsync(string? broadcasterId, string? accessToken, List<SubscriptionType>? subscriptionTypes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(_botSettings, nameof(_botSettings));
 
@@ -329,9 +329,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             ArgumentException.ThrowIfNullOrEmpty(_botSettings.ClientId, nameof(_botSettings.ClientId));
         }
 
-        if (string.IsNullOrEmpty(channel))
+        if (string.IsNullOrEmpty(broadcasterId))
         {
-            logger.LogWarning("Channel is null or empty. Skipping subscription");
+            logger.LogWarning("broadcasterId is null or empty. Skipping subscription");
             return;
         }
 
@@ -347,16 +347,16 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             { "Client-Id", _botSettings.ClientId }
         };
 
-        _channel = channel;
+        _broadcasterId = broadcasterId;
         
-        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, channel);
+        logger.LogDebug("Attempting to subscribe to total of {count} events for channel {channel}", subscriptionTypes.Count, broadcasterId);
         
         foreach (var subscription in subscriptionTypes)
         {
             if (string.IsNullOrEmpty(subscription.Name) || string.IsNullOrEmpty(subscription.Version))
                 continue;
             
-            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, channel);
+            logger.LogDebug("Subscribing to channel event: {subscriptionName} | Version: {version} | Channel: {channel}", subscription.Name, subscription.Version, broadcasterId);
             
             var message = new Message
             {
@@ -368,9 +368,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
                         Version = subscription.Version,
                         Condition = new Condition
                         {
-                            BroadcasterUserId = channel,
-                            ModeratorUserId = subscription.Name.Equals("channel.follow") ? channel : null,
-                            UserId = subscription.Name.StartsWith("channel.chat") ? channel : null
+                            BroadcasterUserId = broadcasterId,
+                            ModeratorUserId = subscription.Name.Equals("channel.follow") ? broadcasterId : null,
+                            UserId = subscription.Name.StartsWith("channel.chat") ? broadcasterId : null
                         },
                         Transport = new Transport
                         {
