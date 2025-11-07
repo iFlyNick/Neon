@@ -84,28 +84,28 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
                 await Task.Delay(500, timeoutCts.Token);
             }
             
-            logger.LogDebug("New websocket session connected for broadcaster: {broadcasterId} | New SessionId: {newSessionId}", broadcasterId, newWsService.GetSessionId());
+            logger.LogDebug("New websocket session connected for broadcaster: {broadcasterId} | New SessionId: {newSessionId} | New Hash: {hash}", broadcasterId, newWsService.GetSessionId(), newWsService.GetHashCode());
             
             if (newWsService.GetSessionId() == oldSessionId)
             {
-                logger.LogDebug("***New websocket session id is the same as the old session id for broadcaster: {broadcasterId}. No need to disconnect old session.***", broadcasterId);
+                logger.LogDebug("***New websocket session id is the same as the old session id for broadcaster: {broadcasterId}. No need to disconnect old session.*** | New Hash: {hash} | Old Hash: {oldHash}", broadcasterId, newWsService.GetHashCode(), wsService.GetHashCode());
                 
                 if (_webSocketServices.TryGetValue(broadcasterId, out var wsList1))
                 {
-                    logger.LogDebug("Removing old websocket session from list for broadcaster: {broadcasterId} | Old SessionId: {oldSessionId}", broadcasterId, oldSessionId);
+                    logger.LogDebug("Removing old websocket session from list for broadcaster: {broadcasterId} | Old SessionId: {oldSessionId} | Old Hash: {hash}", broadcasterId, oldSessionId, wsService.GetHashCode());
                     wsList1.RemoveAll(s => s.GetSessionId() == oldSessionId);
-                    logger.LogDebug("Adding new websocket session to list for broadcaster: {broadcasterId} | New SessionId: {newSessionId}", broadcasterId, newWsService.GetSessionId());
+                    logger.LogDebug("Adding new websocket session to list for broadcaster: {broadcasterId} | New SessionId: {newSessionId} | New Hash: {hash}", broadcasterId, newWsService.GetSessionId(), newWsService.GetHashCode());
                     wsList1.Add(newWsService);
                 }
                 else
                 {
-                    logger.LogDebug("Creating new websocket service list for broadcaster: {broadcasterId} | New SessionId: {newSessionId}", broadcasterId, newWsService.GetSessionId());
+                    logger.LogDebug("Creating new websocket service list for broadcaster: {broadcasterId} | New SessionId: {newSessionId} | New Hash: {hash}", broadcasterId, newWsService.GetSessionId(), newWsService.GetHashCode());
                     _webSocketServices[broadcasterId] = [newWsService];
                 }
             }
             
-            logger.LogDebug("Disconnecting old websocket session for broadcaster: {broadcasterId} | Old SessionId: {oldSessionId}", broadcasterId, oldSessionId);
-            await wsService.DisconnectAsync(CancellationToken.None);
+            logger.LogDebug("Disconnecting old websocket session for broadcaster: {broadcasterId} | Old SessionId: {oldSessionId} | Old Hash: {hash}", broadcasterId, oldSessionId, wsService.GetHashCode());
+            await wsService.DisconnectAsync(false, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -208,7 +208,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
             if (_webSocketServices.TryGetValue(broadcasterId, out var wsList))
             {
                 wsList.RemoveAll(s => s.GetSessionId() == sessionId);
-                await wsService.DisconnectAsync(CancellationToken.None);
+                await wsService.DisconnectAsync(true, CancellationToken.None);
                 
                 logger.LogDebug("Disconnected websocket session for broadcaster: {broadcasterId} | SessionId: {sessionId}", broadcasterId, sessionId);
                 if (wsList.Count == 0)
@@ -246,7 +246,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         if (_webSocketServices.TryGetValue(wsOwner, out var wsList))
         {
             wsList.RemoveAll(s => s.GetSessionId() == wsSessionId);
-            await wsService.DisconnectAsync(CancellationToken.None);
+            await wsService.DisconnectAsync(true, CancellationToken.None);
                 
             logger.LogDebug("Disconnected websocket session for broadcaster: {broadcasterName} | SessionId: {sessionId}", wsOwner, wsSessionId);
             

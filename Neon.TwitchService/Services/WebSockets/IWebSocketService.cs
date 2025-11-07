@@ -16,7 +16,7 @@ public interface IWebSocketService
     void SetBroadcasterId(string? broadcasterId);
     string? GetBroadcasterId();
     Task ConnectAsync(string? wsUrl, CancellationToken ct = default);
-    Task DisconnectAsync(CancellationToken ct = default);
+    Task DisconnectAsync(bool sendClose, CancellationToken ct = default);
     Task SubscribeChannelAsync(string? broadcasterId, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
     Task SubscribeChannelChatAsync(string? broadcasterId, string? chatterId, string? accessToken, List<SubscriptionType>? subscriptions, CancellationToken ct = default);
  

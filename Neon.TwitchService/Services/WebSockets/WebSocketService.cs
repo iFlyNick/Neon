@@ -78,7 +78,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             ArgumentNullException.ThrowIfNull(url, "WebSocketUrl");
         }
 
-        logger.LogInformation("Connecting websocket at {time}", DateTime.UtcNow);
+        logger.LogInformation("Connecting websocket at {time} | Hash: {hash}", DateTime.UtcNow, GetHashCode());
 
         var attempts = 1;
         var connected = false;
@@ -102,7 +102,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error connecting to websocket at {url}. Attempt {attempt} of {maxAttempts}", url, attempts, RetryCount);
+                logger.LogError(ex, "Error connecting to websocket at {url}. Attempt {attempt} of {maxAttempts} | Hash: {hash}", url, attempts, RetryCount, GetHashCode());
                 
                 if (attempts >= RetryCount)
                 {
@@ -123,16 +123,24 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         _ = Task.Run(async () => await ListenAsync(ct), ct);
     }
 
-    public async Task DisconnectAsync(CancellationToken ct = default)
+    public async Task DisconnectAsync(bool sendClose, CancellationToken ct = default)
     {
         if (_client is null || !WsConnected)
         {
-            logger.LogWarning("Client is already disconnected");
+            logger.LogDebug("Client is already disconnected | Hash: {hash}", GetHashCode());
             return;
         }
 
-        logger.LogInformation("Disconnecting websocket session {session} at {time}", _sessionId, DateTime.UtcNow);
+        logger.LogInformation("Disconnecting websocket session {session} at {time} | Sending close to twitch: {sendClose} | Hash: {hash}", _sessionId, DateTime.UtcNow, sendClose, GetHashCode());
 
+        if (!sendClose)
+        {
+            logger.LogInformation("Disposing websocket without sending close to twitch. Hash: {hash}", GetHashCode());
+            _cts?.CancelAsync();
+            _client.Dispose();
+            return;
+        }
+        
         try
         {
             await _client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnecting", ct);
@@ -140,7 +148,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error disconnecting websocket");
+            logger.LogError(ex, "Error disconnecting websocket! Hash: {hash}", GetHashCode());
         }
     }
     
@@ -155,7 +163,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
             if (result.MessageType == WebSocketMessageType.Close || _client.State == WebSocketState.CloseReceived || _client.State == WebSocketState.CloseSent || _client.State == WebSocketState.Closed || _client.State == WebSocketState.Aborted)
             {
-                logger.LogWarning("Websocket connection closed. SessionId: {session}. Reason: {reason}", _sessionId, result.CloseStatusDescription);
+                logger.LogWarning("Websocket connection closed. SessionId: {session}. Reason: {reason} | Hash: {hash}", _sessionId, result.CloseStatusDescription, GetHashCode());
                 _cts?.CancelAsync();
                 OnWebsocketClosed(_sessionId, result.CloseStatusDescription);
                 break;
@@ -167,7 +175,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             Array.Clear(buffer, 0, buffer.Length);
         }
 
-        logger.LogDebug("Websocket listen async method has exited the while loop, the connection has been closed.");
+        logger.LogDebug("Websocket listen async method has exited the while loop, the connection has been closed. Hash: {hash}", GetHashCode());
     }
 
     private void HandleMessage(string? message)
@@ -199,7 +207,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_welcome"))
         {
             var wsSessionId = twitchMessage?.Payload?.Session?.Id;
-            logger.LogDebug("First time receiving session id from twitch websocket: {sessionId} | Hash: {hash}", wsSessionId, GetHashCode());
+            logger.LogDebug("First time receiving session id from twitch websocket: {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
             _sessionId = wsSessionId;
             
             //track keep alive interval with a buffer value for network delays. if no value for some reason, set to default twitch value of 10 seconds
@@ -215,7 +223,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         //handle reconnect requests from twitch
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("session_reconnect"))
         {
-            logger.LogInformation("Received ws message for reconnect on session {sessionId} | Hash: {hash}", _sessionId, GetHashCode());
+            logger.LogInformation("Received ws message for reconnect on session {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
             _reconnectRequested = true;
             OnReconnectRequested(twitchMessage?.Payload?.Session);
             return;
@@ -224,7 +232,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         //handle ws revocations from twitch
         if (!string.IsNullOrEmpty(messageType) && messageType.Equals("revocation"))
         {
-            logger.LogInformation("Received ws revocation message on session {sessionId}", _sessionId);
+            logger.LogInformation("Received ws revocation message on session {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
             OnRevocation(twitchMessage?.Payload?.Subscription);
             return;
         }
@@ -463,7 +471,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
 
     private async Task KeepAliveMonitor()
     {
-        logger.LogDebug("Starting keep alive monitor task for session {sessionId} | Hash: {hash}", _sessionId, GetHashCode());
+        logger.LogDebug("Starting keep alive monitor task for session {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
 
         try
         {
@@ -485,7 +493,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
         }
         catch (OperationCanceledException)
         {
-            logger.LogDebug("Keep alive monitor task cancellation requested for session {sessionId} | Hash: {hash}", _sessionId, GetHashCode());
+            logger.LogDebug("Keep alive monitor task cancellation requested for session {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
             return;
         }
         catch (Exception ex)
@@ -493,7 +501,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<TwitchS
             logger.LogError(ex, "Error in keep alive monitor task");
         }
         
-        logger.LogDebug("Keep alive monitor detected no new messages within defined interval. Raising event to indicate the ws should be recreated. SessionId: {sessionId} | Hash: {hash}", _sessionId, GetHashCode());
+        logger.LogDebug("Keep alive monitor detected no new messages within defined interval. Raising event to indicate the ws should be recreated. SessionId: {sessionId} | BroadcasterId: {broadcasterId} | ChatterId: {chatterId} | Hash: {hash}", _sessionId, _broadcasterId, _chatterId, GetHashCode());
         logger.LogDebug("Last message received at {lastMessageReceived}. Keep alive timeout set to {keepAliveTimeout} seconds.", _lastMessageReceived, _keepAliveTimeout.TotalSeconds);
         
         OnKeepAliveFailure(_sessionId);
