@@ -27,4 +27,24 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Include="wwwroot\fonts\Super Unicorn.ttf" />
+      <None Include="wwwroot\images\skyye\broadcaster.png" />
+      <None Include="wwwroot\images\skyye\chatter.png" />
+      <None Include="wwwroot\images\skyye\cthulhulel\cthulhulel.png" />
+      <None Include="wwwroot\images\skyye\cthulhulel\cthulhulel_tent.png" />
+      <None Include="wwwroot\images\skyye\cthulhulel\cthulhulel_wing.png" />
+      <None Include="wwwroot\images\skyye\event_background.png" />
+      <None Include="wwwroot\images\skyye\event_cloud.png" />
+      <None Include="wwwroot\images\skyye\event_special.png" />
+      <None Include="wwwroot\images\skyye\glow.png" />
+      <None Include="wwwroot\images\skyye\iflynyx\coffere.png" />
+      <None Include="wwwroot\images\skyye\iflynyx\iflynyx.png" />
+      <None Include="wwwroot\images\skyye\iflynyx\pc.png" />
+      <None Include="wwwroot\images\skyye\mod.png" />
+      <None Include="wwwroot\images\skyye\sparkles.png" />
+      <None Include="wwwroot\images\skyye\vip.png" />
+      <None Include="wwwroot\images\skyye\vip_badge.png" />
+    </ItemGroup>
+
 </Project>

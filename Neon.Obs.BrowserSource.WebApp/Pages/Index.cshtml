@@ -4,7 +4,15 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-left">
-    <div id="chatapp" class="overflow-scroll chatapp">
-    </div>
-</div>
+<div id="chat-container"></div>
+
+@section Scripts
+{
+    <script>window.__broadcasterId = "@Model.BroadcasterId";</script>
+    <script>window.__styleType = "@Model.OverlayType";</script>
+    <script>window.__customUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(@Model.CustomUsers))</script>
+    <script>window.__ignoreBotUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(@Model.BotUsers))</script>
+    <script>window.__ignoreCommandMessages = "@Model.IgnoreCommandMessages"</script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/overlays/@(Model.OverlayType).js"></script>
+}

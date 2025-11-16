@@ -175,7 +175,7 @@ public class BetterTtvService(ILogger<BetterTtvService> logger, IOptions<EmotePr
 
             //for now just access the first image
             //TODO: add support for all image sizes
-            var emoteImageUrl = $"https://cdn.betterttv.net/emote/{emoteId}/1x.webp";
+            var emoteImageUrl = $"https://cdn.betterttv.net/emote/{emoteId}/3x.webp";
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {
@@ -224,7 +224,7 @@ public class BetterTtvService(ILogger<BetterTtvService> logger, IOptions<EmotePr
 
             //for now just access the first image
             //TODO: add support for all image sizes
-            var emoteImageUrl = $"https://cdn.betterttv.net/emote/{emoteId}/1x.webp";
+            var emoteImageUrl = $"https://cdn.betterttv.net/emote/{emoteId}/3x.webp";
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {

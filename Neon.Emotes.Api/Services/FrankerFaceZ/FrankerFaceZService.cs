@@ -150,10 +150,11 @@ public class FrankerFaceZService(ILogger<FrankerFaceZService> logger, IOptions<E
         foreach (var emote in emoteArray)
         {
             var emoteName = emote["name"]?.ToString();
-
-            //for now just access the first image
-            //TODO: add support for all image sizes
-            var emoteImageUrl = emote["urls"]?["1"]?.ToString();
+            
+            var emoteSmall = emote["urls"]?["1"]?.ToString();
+            var emoteMedium = emote["urls"]?["2"]?.ToString();
+            var emoteLarge = emote["urls"]?["4"]?.ToString();
+            var emoteImageUrl = emoteLarge ?? emoteMedium ?? emoteSmall;
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {

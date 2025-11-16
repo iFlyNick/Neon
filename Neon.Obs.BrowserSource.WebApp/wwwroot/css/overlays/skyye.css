@@ -1,0 +1,469 @@
+﻿:root {
+    --chatbox-start-color: hsl(211, 95%, 71%);
+    --chatbox-end-color: hsl(192, 100%, 93%);
+    --chatbox-gradient-angle: 120deg;
+    --chatbox-gradient-stops: 30%;
+    --chatbox-border-color: hsl(218, 92%, 67%);
+    --chatbox-inner-border-color: hsl(180, 100%, 95%);
+
+    --user-box-start-color: hsl(211, 95%, 71%);
+    --user-box-end-color: hsl(191, 100%, 93%);
+    --user-box-gradient-angle: 180deg;
+    --user-box-gradient-stops: 10%;
+    --user-box-border-color: hsl(218, 92%, 67%);
+
+    --username-font-family: "SuperUnicorn", sans-serif;
+    --username-font-color: hsl(211, 47%, 21%);
+    --chat-message-font-family: "SuperUnicorn", sans-serif;
+    --chat-message-font-color: hsl(211, 47%, 21%);
+
+    --chat-container-width: 450px;
+    --animation-duration: .5s;
+    --new-message-animation-duration: .7s;
+}
+
+@font-face {
+    font-family: 'SuperUnicorn';
+    src: url("/fonts/Super Unicorn.ttf") format('truetype');
+}
+
+@keyframes wiggle {
+    0% {
+        transform: translateY(0px);
+    }
+    25% {
+        transform: translateY(2px);
+    }
+    50% {
+        transform: translateY(0px);
+    }
+    75% {
+        transform: translateY(-2px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.fade-out {
+    opacity: 0 !important;
+    transition: opacity var(--animation-duration) ease;
+}
+
+body {
+    background-color: transparent;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+#chat-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    max-width: var(--chat-container-width);
+    margin: 0 .5rem;
+    padding: 1rem 0;
+}
+
+.neon-message {
+    margin: 1rem 0 0 0;
+    position: relative;
+    z-index: 1;
+    opacity: 1;
+    animation-name: fadeIn;
+    animation-timing-function: ease-in-out;
+    animation-duration: var(--new-message-animation-duration);
+}
+
+.user-box {
+    position: absolute;
+    z-index: 3;
+    top: -10px;
+    right: 1rem;
+    width: fit-content;
+    max-width: 70%;
+
+    display: flex;
+    align-items: center;
+    justify-content: left;
+
+    border: 1.5px solid var(--user-box-border-color);
+    border-radius: 75px;
+    background-image: linear-gradient(var(--user-box-gradient-angle), var(--user-box-start-color), var(--user-box-gradient-stops), var(--user-box-end-color));
+}
+
+.user-box span {
+    padding: 3px 10px;
+    font-size: 0.85rem;
+    line-height: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--username-font-family);
+    color: var(--username-font-color);
+}
+
+.chatbox-outer {
+    position: relative;
+    z-index: 2;
+    height: auto;
+    border-radius: 12px;
+    background-image: linear-gradient(var(--chatbox-gradient-angle), var(--chatbox-start-color), var(--chatbox-gradient-stops), var(--chatbox-end-color));
+    border: 2px solid var(--chatbox-border-color);
+}
+
+.chatbox-inner {
+    margin: .125rem;
+    border-radius: 12px;
+    border: 1.5px solid var(--chatbox-inner-border-color);
+}
+
+.chat-message {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    margin: 1rem .5rem 1rem .5rem;
+    font-family: var(--chat-message-font-family);
+    color: var(--chat-message-font-color);
+}
+
+.chat-message span {
+    display: inline;
+    align-items: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.chat-message span img {
+    height: 1.3rem;
+    vertical-align: middle;
+}
+
+.chatter-normal {
+    background-image: url('/images/skyye/chatter.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+    left: 1rem;
+}
+
+.chatter-broadcaster {
+    background-image: url('/images/skyye/broadcaster.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 4;
+    width: 60px;
+    height: 80px;
+    top: -44px;
+    left: -.4rem;
+}
+
+.chatter-sub {
+    background-image: url('/images/skyye/chatter.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+    left: 1rem;
+    /* animation: wiggle var(--animation-duration) infinite; */
+}
+
+.chatter-sub-razzle-dazzle {
+    background-image: url('/images/skyye/sparkles.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+    left: 1rem;
+    /* animation: wiggle var(--animation-duration) infinite; */
+}
+
+.chatter-mod {
+    background-image: url('/images/skyye/mod.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+    left: 1rem;
+    /* animation: wiggle var(--animation-duration) infinite; */
+}
+
+.chatter-vip {
+    background-image: url('/images/skyye/vip.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+    left: 1rem;
+    /* animation: wiggle var(--animation-duration) infinite; */
+}
+
+.chatter-vip-badge {
+    background-image: url('/images/skyye/vip_badge.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 16px;
+    height: 16px;
+    top: -13px;
+    left: 3.3rem;
+}
+
+.chatter-cthulhulel {
+    background-image: url('/images/skyye/cthulhulel/cthulhulel.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 38px;
+    height: 38px;
+    top: -32px;
+    left: 1.1rem;
+}
+
+canvas {
+    width: 22px;
+    height: 22px;
+    position: absolute;
+    z-index: -1;
+    top: -28px;
+    left: 2.9rem;
+}
+
+canvas.flipped {
+    width: 22px;
+    height: 22px;
+    position: absolute;
+    z-index: -1;
+    top: -28px;
+    left: .25rem;
+}
+
+.chatter-cthulhulel-wing {
+    animation: wiggle var(--animation-duration) infinite;
+}
+
+.chatter-cthulhulel-wing.flipped {
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: -1;
+    width: 14px;
+    height: 14px;
+    top: -24px;
+    left: .58rem;
+    transform: scaleX(-1);
+}
+
+.chatter-cthulhulel-tent {
+    background-image: url('/images/skyye/cthulhulel/cthulhulel_tent.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 20px;
+    height: 20px;
+    top: -15px;
+    left: 2.7rem;
+}
+
+.chatter-cthulhulel-tent.flipped {
+    background-image: url('/images/skyye/cthulhulel/cthulhulel_tent.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 20px;
+    height: 20px;
+    top: -15px;
+    left: 1.6rem;
+    transform: scaleX(-1);
+}
+
+.chatter-iflynyx {
+    background-image: url('/images/skyye/iflynyx/iflynyx.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 0;
+    width: 40px;
+    height: 40px;
+    top: -27px;
+    left: 2rem;
+    /* animation: wiggle var(--animation-duration) infinite; */
+}
+
+.chatter-iflynyx-laptop {
+    background-image: url('/images/skyye/iflynyx/pc.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 4;
+    width: 40px;
+    height: 40px;
+    top: -25px;
+    left: 0;
+}
+
+.chatter-iflynyx-coffee {
+    background-image: url('/images/skyye/iflynyx/coffere.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 4;
+    width: 40px;
+    height: 40px;
+    top: -29px;
+    left: 4.2rem;
+    transform: scaleX(-1);
+}
+
+.event-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eventbox-outer {
+    border-radius: 45px;
+    height: 50px;
+    width: 65%;
+    border: 2px solid var(--chatbox-border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.eventbox-inner {
+    height: 100%;
+    width: 100%;
+    border-radius: 45px;
+    background-image: url("/images/skyye/event_background.png");
+    background-size: cover;
+    background-position: 50% 65%;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eventbox-inner span {
+    font-family: var(--username-font-family);
+    color: var(--username-font-color);
+    padding: 0 1rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: center;
+}
+
+.event-image-top-small {
+    background-image: url('/images/skyye/chatter.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: -1;
+    width: 40px;
+    height: 40px;
+    top: -30px;
+}
+
+.event-image-top-medium {
+    background-image: url('/images/skyye/chatter.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 5;
+    width: 40px;
+    height: 40px;
+    top: -28px;
+}
+
+.event-image-top-medium-razzle-dazzle {
+    background-image: url('/images/skyye/sparkles.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 5;
+    width: 35px;
+    height: 35px;
+    top: -27px;
+}
+
+.event-image-top-medium-glow {
+    background-image: url('/images/skyye/glow.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 3;
+    width: 50px;
+    height: 50px;
+    top: -33px;
+}
+
+.event-image-top-large {
+    background-image: url('/images/skyye/event_special.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 5;
+    width: 70px;
+    height: 70px;
+    top: -32px;
+}
+
+.event-image-bottom-left {
+    background-image: url('/images/skyye/event_cloud.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    top: 40px;
+    right: 65%;
+}
+
+.event-image-bottom-right {
+    background-image: url('/images/skyye/event_cloud.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    top: 40px;
+    left: 65%;
+    transform: scaleX(-1);
+}

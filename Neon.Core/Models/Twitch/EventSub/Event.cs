@@ -6,36 +6,42 @@ public class Event
 {
     [JsonProperty("id")]
     public string? Id { get; set; }
+    
     [JsonProperty("broadcaster_user_id")]
     public string? BroadcasterUserId { get; set; }
     [JsonProperty("broadcaster_user_login")]
     public string? BroadcasterUserLogin { get; set; }
     [JsonProperty("broadcaster_user_name")]
     public string? BroadcasterUserName { get; set; }
+    
     [JsonProperty("moderator_user_id")]
     public string? ModeratorUserId { get; set; }
     [JsonProperty("moderator_user_login")]
     public string? ModeratorUserLogin { get; set; }
     [JsonProperty("moderator_user_name")]
     public string? ModeratorUserName { get; set; }
+    
     [JsonProperty("requester_user_id")]
     public string? RequesterUserId { get; set; }
     [JsonProperty("requester_user_login")]
     public string? RequesterUserLogin { get; set; }
     [JsonProperty("requester_user_name")]
     public string? RequesterUserName { get; set; }
+    
     [JsonProperty("chatter_user_id")]
     public string? ChatterUserId { get; set; }
     [JsonProperty("chatter_user_login")]
     public string? ChatterUserLogin { get; set; }
     [JsonProperty("chatter_user_name")]
     public string? ChatterUserName { get; set; }
+    
     [JsonProperty("user_id")]
     public string? UserId { get; set; }
     [JsonProperty("user_login")]
     public string? UserLogin { get; set; }
     [JsonProperty("user_name")]
     public string? UserName { get; set; }
+    
     [JsonProperty("user_input")]
     public string? UserInput { get; set; }
     [JsonProperty("status")]
@@ -90,4 +96,20 @@ public class Event
     public List<string>? ContentClassificationLabels { get; set; }
     [JsonProperty("power_up")]
     public PowerUp? PowerUp { get; set; }
+    
+    //raid details
+    [JsonProperty("from_broadcaster_user_id")]
+    public string? FromBroadcasterUserId { get; set; }
+    [JsonProperty("from_broadcaster_user_login")]
+    public string? FromBroadcasterUserLogin { get; set; }
+    [JsonProperty("from_broadcaster_user_name")]
+    public string? FromBroadcasterUserName { get; set; }
+    [JsonProperty("to_broadcaster_user_id")]
+    public string? ToBroadcasterUserId { get; set; }
+    [JsonProperty("to_broadcaster_user_login")]
+    public string? ToBroadcasterUserLogin { get; set; }
+    [JsonProperty("to_broadcaster_user_name")]
+    public string? ToBroadcasterUserName { get; set; }
+    [JsonProperty("viewers")]
+    public int? Viewers { get; set; }
 }

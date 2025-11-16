@@ -1,16 +1,12 @@
-﻿using Neon.Core.Models.Chatbot;
-using Neon.Core.Models.Twitch.EventSub;
+﻿using Neon.Core.Models.Twitch.EventSub;
+using Neon.Obs.BrowserSource.WebApp.Models;
 
-namespace Neon.TwitchChatbotService.Services.Events;
+namespace Neon.Obs.BrowserSource.WebApp.Services.Events;
 
 public class EventService(ILogger<EventService> logger) : IEventService
 {
-    public ChatbotMessage? ProcessMessage(Message? message)
+    public TwitchEventMessage? ProcessMessage(Message? message)
     {
-        //consume the chat event payload and return a chatbot message. this will parse the event payload to figure out what type of event it is and then generate a standard event message for the consumer to know how to process it
-        
-        //TODO: this service will need to somehow interface with per user settings to enable or disable specific events from going back to the twitch api to post in chat. for now, this will be soft coded by returning null if the event is not supported.
-        
         if (message is null || message.MetaData is null)
             return null;
 
@@ -22,36 +18,37 @@ public class EventService(ILogger<EventService> logger) : IEventService
         var eventMessage = GetStandardEventMessage(eventType, message);
         if (string.IsNullOrEmpty(eventMessage))
         {
-            logger.LogDebug("Chatbot event service did not find matching message for event type {EventType}. Skipping message creation.", eventType);
+            logger.LogDebug("OBS event service did not find matching message for event type {EventType}. Skipping message creation.", eventType);
             return null;
         }
 
-        var retVal = new ChatbotMessage
+        var eventLevel = GetEventLevel(eventType, message);
+
+        var retVal = new TwitchEventMessage
         {
+            EventType = eventType,
+            EventMessage = eventMessage,
+            EventLevel = eventLevel,
             ChannelName = message.Payload?.Event?.BroadcasterUserName,
             ChannelId = message.Payload?.Event?.BroadcasterUserId,
             ChatterName = message.Payload?.Event?.UserName,
             ChatterId = message.Payload?.Event?.UserId,
-            Message = null, //not set in standard event capture
-            EventType = eventType,
-            EventMessage = eventMessage
         };
 
         return retVal;
     }
 
-    private string? GetStandardEventType(string? eventType)
+    private static string? GetStandardEventType(string? eventType)
     {
         return eventType?.ToLower() switch
         {
-            //"channel.follow" => "follow",
-            //"channel.subscription.gift" => "gift-sub",
-            //"channel.subscribe" => "sub",
-            //"channel.subscription.message" => "resub",
-            "channel.ad_break.begin" => "ad-begin",
-            //"channel.channel_points_custom_reward_redemption.add" => "reward-redeem",
-            //"channel.raid" => "raid",
-            //"channel.bits.use" => "cheer",
+            "channel.follow" => "follow",
+            "channel.subscription.gift" => "gift-sub",
+            "channel.subscribe" => "sub",
+            "channel.subscription.message" => "resub",
+            "channel.channel_points_custom_reward_redemption.add" => "reward-redeem",
+            "channel.raid" => "raid",
+            "channel.bits.use" => "cheer",
             _ => null
         };
     }
@@ -71,7 +68,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
         var giftSubCount = int.TryParse(message?.Payload?.Event?.Total, out var count) ? count : 0;
         var giftSubCountString = giftSubCount > 1 ? $"{giftSubCount} tier {subTierType} subs" : $"a tier {subTierType} sub";
         var giftSubMessage = anonSub ? $"An anonymous user gifted {giftSubCountString}!" : $"{message?.Payload?.Event?.UserName} gifted {giftSubCountString}!";
-        
+
         //exclude power up events for users using bits for emotes
         if (message?.Payload?.Event?.Type == "power_up")
         {
@@ -83,13 +80,24 @@ public class EventService(ILogger<EventService> logger) : IEventService
         {
             "follow" => $"{message?.Payload?.Event?.UserName} just followed!",
             "gift-sub" => giftSubMessage,
-            "sub" => $"{message?.Payload?.Event?.UserName} just subscribed at tier {subTierType}!",
-            "resub" => $"{message?.Payload?.Event?.UserName} just resubscribed at tier {subTierType}!",
-            "ad-begin" => $"An ad break has started. Ad length {message?.Payload?.Event?.DurationSeconds} seconds. We'll be back soon!",
+            "sub" => $"{message?.Payload?.Event?.UserName} subscribed at tier {subTierType}!",
+            "resub" => $"{message?.Payload?.Event?.UserName} resubscribed at tier {subTierType}!",
             "reward-redeem" => $"{message?.Payload?.Event?.UserName} redeemed {message?.Payload?.Event?.Reward?.Title}!",
-            "raid" => $"{message?.Payload?.Event?.UserName} is raiding the channel with {message?.Payload?.Event?.Viewers} viewers!",
+            "raid" => $"{message?.Payload?.Event?.FromBroadcasterUserName} just raided with {message?.Payload?.Event?.Viewers} viewers!",
             "cheer" => $"{message?.Payload?.Event?.UserName} just cheered {message?.Payload?.Event?.Bits} bits!",
             _ => null
+        };
+    }
+
+    private static string? GetEventLevel(string? eventType, Message? message)
+    {
+        return eventType?.ToLowerInvariant() switch
+        {
+            "raid" => "high",
+            "gift-sub" => int.TryParse(message?.Payload?.Event?.Total, out var count) && count >= 5 ? "high" : "medium", 
+            "sub" or "resub" => "medium",
+            "cheer" => (message?.Payload?.Event?.Bits ?? 0) >= 1000 ? "high" : "medium",
+            _ => "small"
         };
     }
 }

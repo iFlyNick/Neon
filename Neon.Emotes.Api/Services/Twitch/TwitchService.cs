@@ -57,12 +57,16 @@ public class TwitchService(ILogger<TwitchService> logger, IHelixService helixSer
         foreach (var emote in emoteArray)
         {
             var emoteName = emote["name"]?.ToString();
-            //for now just access the smallest image
-            //TODO: add support for all image sizes
             var hasAnimatedVariant = emote["format"]?.ToObject<List<string>>()?.Contains("animated") ?? false;
+            
+            var emoteSmall = emote["images"]?["url_1x"]?.ToString();
+            var emoteMedium = emote["images"]?["url_2x"]?.ToString();
+            var emoteLarge = emote["images"]?["url_4x"]?.ToString();
+            var largestEmoteUrl = emoteLarge ?? emoteMedium ?? emoteSmall;
+            
             var emoteImageUrl = hasAnimatedVariant
-                ? emote["images"]?["url_1x"]?.ToString().Replace("/static/", "/animated/")
-                : emote["images"]?["url_1x"]?.ToString(); 
+                ? largestEmoteUrl?.Replace("/static/", "/animated/")
+                : largestEmoteUrl; 
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {

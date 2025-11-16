@@ -7,7 +7,6 @@ namespace Neon.Emotes.Api.Services.SevenTv;
 
 public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProviderSettings> emoteProviderSettings, IHttpService httpService) : ISevenTvService
 {
-    private readonly ILogger<SevenTvService> _logger = logger;
     private readonly EmoteProviderSettings _emoteProviderSettings = emoteProviderSettings.Value;
     private readonly IHttpService _httpService = httpService;
 
@@ -17,7 +16,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
     {
         if (string.IsNullOrEmpty(broadcasterId))
         {
-            _logger.LogError("Twitch broadcaster id is null or empty.");
+            logger.LogError("Twitch broadcaster id is null or empty.");
             return null;
         }
 
@@ -25,7 +24,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (settings is null)
         {
-            _logger.LogError("Emote provider settings are null.");
+            logger.LogError("Emote provider settings are null.");
             return null;
         }
 
@@ -33,7 +32,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (string.IsNullOrEmpty(channelEmoteUrl))
         {
-            _logger.LogError("Channel emote URL is null or empty.");
+            logger.LogError("Channel emote URL is null or empty.");
             return null;
         }
 
@@ -43,13 +42,13 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
             if (response is null)
             {
-                _logger.LogError("Http response is null from SevenTv api.");
+                logger.LogError("Http response is null from SevenTv api.");
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Http response from SevenTv api is not successful. Status code: {statusCode}", response.StatusCode);
+                logger.LogError("Http response from SevenTv api is not successful. Status code: {statusCode}", response.StatusCode);
                 return null;
             }
 
@@ -61,7 +60,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting global emotes from SevenTv.");
+            logger.LogError(ex, "Error getting global emotes from SevenTv.");
             return null;
         }
     }
@@ -72,7 +71,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (settings is null)
         {
-            _logger.LogError("Emote provider settings are null.");
+            logger.LogError("Emote provider settings are null.");
             return null;
         }
 
@@ -80,7 +79,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (string.IsNullOrEmpty(globalEmoteUrl))
         {
-            _logger.LogError("Global emote URL is null or empty.");
+            logger.LogError("Global emote URL is null or empty.");
             return null;
         }
 
@@ -90,13 +89,13 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
             if (response is null)
             {
-                _logger.LogError("Http response is null from SevenTv api.");
+                logger.LogError("Http response is null from SevenTv api.");
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Http response from SevenTv api is not successful. Status code: {statusCode}", response.StatusCode);
+                logger.LogError("Http response from SevenTv api is not successful. Status code: {statusCode}", response.StatusCode);
                 return null;
             }
 
@@ -109,7 +108,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting global emotes from SevenTv.");
+            logger.LogError(ex, "Error getting global emotes from SevenTv.");
             return null;
         }
     }
@@ -120,7 +119,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (settings is null)
         {
-            _logger.LogError($"Emote provider settings for {EmoteProviderName} not found.");
+            logger.LogError($"Emote provider settings for {EmoteProviderName} not found.");
             return null;
         }
 
@@ -131,7 +130,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
     {
         if (string.IsNullOrEmpty(httpResp))
         {
-            _logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
+            logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
             return null;
         }
 
@@ -141,7 +140,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (emoteArray is null || emoteArray.Count == 0)
         {
-            _logger.LogInformation("No emotes found from betterttv response parsing");
+            logger.LogInformation("No emotes found from betterttv response parsing");
             return null;
         }
 
@@ -154,7 +153,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
     {
         if (string.IsNullOrEmpty(httpResp))
         {
-            _logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
+            logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
             return null;
         }
 
@@ -167,7 +166,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (emoteArray is null || emoteArray.Count == 0)
         {
-            _logger.LogInformation("No emotes found in the Helix response.");
+            logger.LogInformation("No emotes found in the Helix response.");
             return null;
         }
 
@@ -175,18 +174,21 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
         {
             var emoteName = emote["name"]?.ToString();
 
-            //var isAnimated = emote["data.animated"]?.ToObject<bool>() ?? false;
-
             var emoteHost = emote["data"]?["host"]?["url"]?.ToString();
-            var emoteEndpoint = emote["data"]?["host"]?["files"]?[0]?["name"]?.ToString();
+            var emoteEndpoint = emote["data"]?["host"]?["files"]?.ToArray()
+                .Where(s => s["format"]?.ToString() == "WEBP").ToList().LastOrDefault()?["name"]?.ToString();
 
-            //for now just access the first image
-            //TODO: add support for all image sizes
+            if (emoteEndpoint is null)
+            {
+                logger.LogDebug("No WEBP format found for emote {emoteName}, defaulting to first file.", emoteName);
+                emoteEndpoint = emote["data"]?["host"]?["files"]?[0]?["name"]?.ToString();
+            }
+            
             var emoteImageUrl = $"https:{emoteHost}/{emoteEndpoint}";
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {
-                _logger.LogWarning("Emote name or image URL is null or empty. Skipping emote.");
+                logger.LogWarning("Emote name or image URL is null or empty. Skipping emote.");
                 continue;
             }
 
@@ -207,7 +209,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
     {
         if (string.IsNullOrEmpty(httpResp))
         {
-            _logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
+            logger.LogInformation("Api response is null or empty. No emotes to parse back out.");
             return null;
         }
 
@@ -220,7 +222,7 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
 
         if (emoteArray is null || emoteArray.Count == 0)
         {
-            _logger.LogInformation("No emotes found in the Helix response.");
+            logger.LogInformation("No emotes found in the Helix response.");
             return null;
         }
 
@@ -228,18 +230,21 @@ public class SevenTvService(ILogger<SevenTvService> logger, IOptions<EmoteProvid
         {
             var emoteName = emote["name"]?.ToString();
 
-            //var isAnimated = emote["data.animated"]?.ToObject<bool>() ?? false;
-
             var emoteHost = emote["data"]?["host"]?["url"]?.ToString();
-            var emoteEndpoint = emote["data"]?["host"]?["files"]?[0]?["name"]?.ToString();
+            var emoteEndpoint = emote["data"]?["host"]?["files"]?.ToArray()
+                .Where(s => s["format"]?.ToString() == "WEBP").ToList().LastOrDefault()?["name"]?.ToString();
 
-            //for now just access the first image
-            //TODO: add support for all image sizes
+            if (emoteEndpoint is null)
+            {
+                logger.LogDebug("No WEBP format found for emote {emoteName}, defaulting to first file.", emoteName);
+                emoteEndpoint = emote["data"]?["host"]?["files"]?[0]?["name"]?.ToString();
+            }
+            
             var emoteImageUrl = $"https:{emoteHost}/{emoteEndpoint}";
 
             if (string.IsNullOrEmpty(emoteName) || string.IsNullOrEmpty(emoteImageUrl))
             {
-                _logger.LogWarning("Emote name or image URL is null or empty. Skipping emote.");
+                logger.LogWarning("Emote name or image URL is null or empty. Skipping emote.");
                 continue;
             }
 

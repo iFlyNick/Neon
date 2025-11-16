@@ -5,6 +5,7 @@ using Neon.Obs.BrowserSource.WebApp.Consumers;
 using Neon.Obs.BrowserSource.WebApp.Hubs;
 using Neon.Obs.BrowserSource.WebApp.Models;
 using Neon.Obs.BrowserSource.WebApp.Services;
+using Neon.Obs.BrowserSource.WebApp.Services.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +20,10 @@ builder.Services.AddSingleton<IKafkaService, KafkaService>();
 
 builder.Services.AddScoped<ITwitchDbService, TwitchDbService>();
 builder.Services.AddScoped<ITwitchChatOverlayService, TwitchChatOverlayService>();
+builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddHostedService<TwitchMessageConsumer>();
+builder.Services.AddHostedService<TwitchEventConsumer>();
 
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();

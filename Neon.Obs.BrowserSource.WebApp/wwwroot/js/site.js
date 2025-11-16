@@ -1,4 +1,26 @@
-﻿const connection = new signalR.HubConnectionBuilder().withUrl("/twitchchat").withAutomaticReconnect().build();
+﻿window.Overlay = {
+    onMessageReceived: null,
+    onEventReceived: null,
+    onInit: null,
+    customUsers: null
+};
+
+const broadcasterId = window.__broadcasterId;
+const styleType = window.__styleType;
+
+const connection = new signalR.HubConnectionBuilder().withUrl("/twitchchat").withAutomaticReconnect().build();
+
+connection.on("ReceiveMessage", (data) => {
+    if (typeof window.Overlay.onMessageReceived === "function") {
+        window.Overlay.onMessageReceived(data);
+    }
+});
+
+connection.on("ReceiveEvent", (data) => {
+    if (typeof window.Overlay.onEventReceived === "function") {
+        window.Overlay.onEventReceived(data);
+    }
+});
 
 connection.onreconnecting(error => {
     console.log("Reconnecting...", error);
@@ -8,14 +30,15 @@ connection.onreconnected(connectionId => {
     console.log("Reconnected. Connection ID:", connectionId);
 });
 
-connection.on("ReceiveMessage", appendChatMessage);
-
 connection.onclose(error => {
    console.log("Connection closed. Attempting to reconnect...", error);
    tryReconnect();
 });
 
-let chatCounter = 0;
+function loadOverlayCss(styleType) {
+    const link = document.getElementById("overlay-style");
+    link.href = `/css/overlays/${styleType}.css`;
+}
 
 async function tryReconnect() {
     while (true) {
@@ -53,36 +76,36 @@ function getDefaultSettings() {
     }
 }
 
-function appendChatMessage(message) {
-    let chatSettings = fetchFromLocalStorage(`chatOverlaySettings-${message.channelId}`);
-    
-    if (chatSettings == null) {
-        chatSettings = getDefaultSettings();
-    } else {
-        chatSettings = JSON.parse(chatSettings);
-    }
-    
-    var id = `chatid-${chatCounter}`;
-    var badgeSpan = "";
-
-    if (message.chatterBadges != null && message.chatterBadges.length > 0 && chatSettings.useTwitchBadges) {
-        message.chatterBadges.forEach((badge) => {
-            badgeSpan += `<span><img src="${badge.imageUrl}" alt="${badge.id}"/></span> `;
-        });
-    }
-
-    $("#chatapp").append(`<p id="${id}" style="font-family: ${chatSettings.fontFamily}; font-size: ${chatSettings.fontSize}px">${badgeSpan}<span style="color:${message.chatterColor}">${message.chatterName}:</span><span class="twitch-message">${message.message}</span></p>`);
-
-    chatCounter++;
-
-    $(`#${id}`)[0].scrollIntoView();
-    
-    setTimeout(() => {
-        $(`#${id}`).fadeOut(1000, function() {
-            $(`#${id}`).remove();
-        });
-    }, chatSettings.chatMessageRemoveDelayMilliseconds);
-}
+// function appendChatMessage(message) {
+//     let chatSettings = fetchFromLocalStorage(`chatOverlaySettings-${message.channelId}`);
+//    
+//     if (chatSettings == null) {
+//         chatSettings = getDefaultSettings();
+//     } else {
+//         chatSettings = JSON.parse(chatSettings);
+//     }
+//    
+//     var id = `chatid-${chatCounter}`;
+//     var badgeSpan = "";
+//
+//     if (message.chatterBadges != null && message.chatterBadges.length > 0 && chatSettings.useTwitchBadges) {
+//         message.chatterBadges.forEach((badge) => {
+//             badgeSpan += `<span><img src="${badge.imageUrl}" alt="${badge.id}"/></span> `;
+//         });
+//     }
+//
+//     $("#chatapp").append(`<p id="${id}" style="font-family: ${chatSettings.fontFamily}; font-size: ${chatSettings.fontSize}px">${badgeSpan}<span style="color:${message.chatterColor}">${message.chatterName}:</span><span class="twitch-message">${message.message}</span></p>`);
+//
+//     chatCounter++;
+//
+//     $(`#${id}`)[0].scrollIntoView();
+//    
+//     setTimeout(() => {
+//         $(`#${id}`).fadeOut(1000, function() {
+//             $(`#${id}`).remove();
+//         });
+//     }, chatSettings.chatMessageRemoveDelayMilliseconds);
+// }
 
 async function startConnection() {
     try {
@@ -152,5 +175,6 @@ function fetchFromLocalStorage(key) {
     return localStorage.getItem(key);
 }
 
-syncOverlaySettings();
+//syncOverlaySettings();
+loadOverlayCss(styleType);
 startConnection();
