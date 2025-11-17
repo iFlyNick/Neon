@@ -17,9 +17,13 @@
     --chat-message-font-family: "SuperUnicorn", sans-serif;
     --chat-message-font-color: hsl(211, 47%, 21%);
 
-    --chat-container-width: 450px;
+    --chat-container-width: 650px;
     --animation-duration: .5s;
     --new-message-animation-duration: .7s;
+}
+
+html {
+    font-size: 28px;
 }
 
 @font-face {
@@ -65,12 +69,14 @@ body {
     padding: 0;
     display: flex;
     justify-content: center;
+    overflow: hidden;
 }
 
 #chat-container {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+    width: 100%;
     max-width: var(--chat-container-width);
     margin: 0 .5rem;
     padding: 1rem 0;
@@ -158,9 +164,9 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
     left: 1rem;
 }
 
@@ -169,11 +175,11 @@ body {
     background-size: contain;
     background-repeat: no-repeat;
     position: absolute;
-    z-index: 4;
-    width: 60px;
-    height: 80px;
-    top: -44px;
-    left: -.4rem;
+    z-index: 2;
+    width: 120px;
+    height: 160px;
+    top: -91px;
+    left: -.6rem;
 }
 
 .chatter-sub {
@@ -182,11 +188,10 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
     left: 1rem;
-    /* animation: wiggle var(--animation-duration) infinite; */
 }
 
 .chatter-sub-razzle-dazzle {
@@ -195,11 +200,10 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
     left: 1rem;
-    /* animation: wiggle var(--animation-duration) infinite; */
 }
 
 .chatter-mod {
@@ -208,11 +212,10 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
     left: 1rem;
-    /* animation: wiggle var(--animation-duration) infinite; */
 }
 
 .chatter-vip {
@@ -221,11 +224,10 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
     left: 1rem;
-    /* animation: wiggle var(--animation-duration) infinite; */
 }
 
 .chatter-vip-badge {
@@ -234,10 +236,64 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 16px;
-    height: 16px;
-    top: -13px;
-    left: 3.3rem;
+    width: 32px;
+    height: 32px;
+    top: -26px;
+    left: 3.6rem;
+}
+
+canvas {
+    width: 44px;
+    height: 44px;
+    position: absolute;
+    z-index: -1;
+    top: -56px;
+    left: 3rem;
+}
+
+canvas.flipped {
+    width: 44px;
+    height: 44px;
+    position: absolute;
+    z-index: -1;
+    top: -56px;
+    left: .25rem;
+}
+
+.chatter-skyyexvii {
+    background-image: url('/images/skyye/skyyexvii/skyye.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 2;
+    width: 120px;
+    height: 160px;
+    top: -91px;
+    left: -.6rem;
+}
+
+.chatter-skyyexvii-hair {
+    background-image: url('/images/skyye/skyyexvii/skyye_hair.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 4;
+    width: 120px;
+    height: 160px;
+    top: -91px;
+    left: -.6rem;
+}
+
+.chatter-skyyexvii-hand {
+    background-image: url('/images/skyye/skyyexvii/skyye_hand.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    z-index: 4;
+    width: 120px;
+    height: 160px;
+    top: -91px;
+    left: -.6rem;
 }
 
 .chatter-cthulhulel {
@@ -246,28 +302,10 @@ body {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 38px;
-    height: 38px;
-    top: -32px;
+    width: 76px;
+    height: 76px;
+    top: -64px;
     left: 1.1rem;
-}
-
-canvas {
-    width: 22px;
-    height: 22px;
-    position: absolute;
-    z-index: -1;
-    top: -28px;
-    left: 2.9rem;
-}
-
-canvas.flipped {
-    width: 22px;
-    height: 22px;
-    position: absolute;
-    z-index: -1;
-    top: -28px;
-    left: .25rem;
 }
 
 .chatter-cthulhulel-wing {
@@ -279,9 +317,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: -1;
-    width: 14px;
-    height: 14px;
-    top: -24px;
+    width: 28px;
+    height: 28px;
+    top: -48px;
     left: .58rem;
     transform: scaleX(-1);
 }
@@ -292,10 +330,10 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 20px;
-    height: 20px;
-    top: -15px;
-    left: 2.7rem;
+    width: 40px;
+    height: 40px;
+    top: -28px;
+    left: 50%;
 }
 
 .chatter-cthulhulel-tent.flipped {
@@ -304,10 +342,10 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 20px;
-    height: 20px;
-    top: -15px;
-    left: 1.6rem;
+    width: 40px;
+    height: 40px;
+    top: -28px;
+    left: 25%;
     transform: scaleX(-1);
 }
 
@@ -317,11 +355,10 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 0;
-    width: 40px;
-    height: 40px;
-    top: -27px;
+    width: 80px;
+    height: 80px;
+    top: -54px;
     left: 2rem;
-    /* animation: wiggle var(--animation-duration) infinite; */
 }
 
 .chatter-iflynyx-laptop {
@@ -330,10 +367,10 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 4;
-    width: 40px;
-    height: 40px;
-    top: -25px;
-    left: 0;
+    width: 80px;
+    height: 80px;
+    top: -50px;
+    left: -.2rem;
 }
 
 .chatter-iflynyx-coffee {
@@ -342,10 +379,10 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 4;
-    width: 40px;
-    height: 40px;
-    top: -29px;
-    left: 4.2rem;
+    width: 80px;
+    height: 80px;
+    top: -58px;
+    left: 4.6rem;
     transform: scaleX(-1);
 }
 
@@ -357,8 +394,8 @@ canvas.flipped {
 
 .eventbox-outer {
     border-radius: 45px;
-    height: 50px;
-    width: 65%;
+    height: 80px;
+    width: 45%;
     border: 2px solid var(--chatbox-border-color);
     display: flex;
     justify-content: center;
@@ -394,9 +431,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: -1;
-    width: 40px;
-    height: 40px;
-    top: -30px;
+    width: 80px;
+    height: 80px;
+    top: -60px;
 }
 
 .event-image-top-medium {
@@ -405,9 +442,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 5;
-    width: 40px;
-    height: 40px;
-    top: -28px;
+    width: 80px;
+    height: 80px;
+    top: -56px;
 }
 
 .event-image-top-medium-razzle-dazzle {
@@ -416,9 +453,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 5;
-    width: 35px;
-    height: 35px;
-    top: -27px;
+    width: 70px;
+    height: 70px;
+    top: -54px;
 }
 
 .event-image-top-medium-glow {
@@ -427,9 +464,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 3;
-    width: 50px;
-    height: 50px;
-    top: -33px;
+    width: 100px;
+    height: 100px;
+    top: -66px;
 }
 
 .event-image-top-large {
@@ -438,9 +475,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 5;
-    width: 70px;
-    height: 70px;
-    top: -32px;
+    width: 140px;
+    height: 140px;
+    top: -64px;
 }
 
 .event-image-bottom-left {
@@ -449,9 +486,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 3;
-    width: 40px;
-    height: 40px;
-    top: 40px;
+    width: 80px;
+    height: 80px;
+    top: 58px;
     right: 65%;
 }
 
@@ -461,9 +498,9 @@ canvas.flipped {
     background-repeat: no-repeat;
     position: absolute;
     z-index: 3;
-    width: 40px;
-    height: 40px;
-    top: 40px;
+    width: 80px;
+    height: 80px;
+    top: 58px;
     left: 65%;
     transform: scaleX(-1);
 }

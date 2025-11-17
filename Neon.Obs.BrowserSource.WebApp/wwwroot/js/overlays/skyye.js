@@ -125,7 +125,7 @@ function buildNewChatMessage(username, style, message, chatterFlags) {
     let chatterImage = document.createElement('div')
     chatterImage.classList.add(`chatter-${style}`);
 
-    if (style === 'vip' || style === 'mod' || style === 'sub' || customUsers.includes(username.toLowerCase())) {
+    if (style === 'vip' || style === 'mod' || style === 'sub' || (customUsers.includes(username.toLowerCase()) && !chatterFlags.isBroadcaster)) {
         chatterImage.classList.add('animated');
     }
 
@@ -193,6 +193,18 @@ function addCustomUserTags(username, element) {
         customTagAppend2.classList.add('animated-wing');
         customTagAppend2.classList.add('flipped');
         element.appendChild(customTagAppend2);
+        
+        return;
+    }
+    
+    if (username.toLowerCase() === 'skyyexvii') {
+        let customTagPrepend = document.createElement('div');
+        customTagPrepend.classList.add('chatter-skyyexvii-hair');
+        element.prepend(customTagPrepend);
+        
+        let customTagAppend = document.createElement('div');
+        customTagAppend.classList.add('chatter-skyyexvii-hand');
+        element.append(customTagAppend);
         
         return;
     }
