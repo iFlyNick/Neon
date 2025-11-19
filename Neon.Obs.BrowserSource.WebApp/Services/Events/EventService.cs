@@ -66,7 +66,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
 
         var anonSub = message?.Payload?.Event?.IsAnonymous ?? false;
         var giftSubCount = int.TryParse(message?.Payload?.Event?.Total, out var count) ? count : 0;
-        var giftSubCountString = giftSubCount > 1 ? $"{giftSubCount} tier {subTierType} subs" : $"a tier {subTierType} sub";
+        var giftSubCountString = giftSubCount > 1 ? $"{giftSubCount} subs" : $"a sub";
         var giftSubMessage = anonSub ? $"An anonymous user gifted {giftSubCountString}!" : $"{message?.Payload?.Event?.UserName} gifted {giftSubCountString}!";
 
         //exclude power up events for users using bits for emotes
@@ -78,13 +78,13 @@ public class EventService(ILogger<EventService> logger) : IEventService
         
         return eventType?.ToLower() switch
         {
-            "follow" => $"{message?.Payload?.Event?.UserName} just followed!",
+            "follow" => $"{message?.Payload?.Event?.UserName} followed!",
             "gift-sub" => giftSubMessage,
-            "sub" => $"{message?.Payload?.Event?.UserName} subscribed at tier {subTierType}!",
-            "resub" => $"{message?.Payload?.Event?.UserName} resubscribed at tier {subTierType}!",
+            "sub" => $"{message?.Payload?.Event?.UserName} subscribed!",
+            "resub" => $"{message?.Payload?.Event?.UserName} resubscribed!",
             "reward-redeem" => $"{message?.Payload?.Event?.UserName} redeemed {message?.Payload?.Event?.Reward?.Title}!",
-            "raid" => $"{message?.Payload?.Event?.FromBroadcasterUserName} just raided with {message?.Payload?.Event?.Viewers} viewers!",
-            "cheer" => $"{message?.Payload?.Event?.UserName} just cheered {message?.Payload?.Event?.Bits} bits!",
+            "raid" => $"{message?.Payload?.Event?.FromBroadcasterUserName} raided with {message?.Payload?.Event?.Viewers} viewers!",
+            "cheer" => $"{message?.Payload?.Event?.UserName} cheered {message?.Payload?.Event?.Bits} bits!",
             _ => null
         };
     }
