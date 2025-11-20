@@ -13,6 +13,7 @@ public class NeonDbContext(DbContextOptions<NeonDbContext> options) : DbContext(
     public DbSet<AuthorizationScope> AuthorizationScope { get; set; }
     public DbSet<AuthorizationScopeSubscriptionType> AuthorizationScopeSubscriptionType { get; set; }
     public DbSet<LoyaltyTracking> LoyaltyTracking { get; set; }
+    public DbSet<StreamElementsAuth> StreamElementsAuth { get; set; }
     public DbSet<SubscriptionType> SubscriptionType { get; set; }
     public DbSet<TwitchAccount> TwitchAccount { get; set; }
     public DbSet<TwitchAccountAuth> TwitchAccountAuth { get; set; }

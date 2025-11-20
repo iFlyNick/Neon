@@ -262,7 +262,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IOptions<BaseKaf
         //start new subscriptions now using the broadcaster name
         //see note above about broadcaster name. from this point on to be clear, subscribe will use the channel, and subscribe user to chat will also use the channel
         //that channel is the channel that was alive on the old websocket and is not tied back to the bot should it have been the one to be disconnected
-        using var ct = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var ct = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         if (string.IsNullOrEmpty(chatterId))
             await Subscribe(broadcasterId, ct.Token);
         else 

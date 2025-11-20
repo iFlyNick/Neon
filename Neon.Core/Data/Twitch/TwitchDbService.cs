@@ -289,4 +289,97 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         
         return overlaySettings?.TwitchChatOverlaySettings?.ToList();
     }
+
+    public async Task<TwitchAccount?> GetTwitchAccountDetailForStreamElementsAuth(string? broadcasterId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterId))
+            return null;
+        
+        var resp = await context.TwitchAccount.AsNoTracking().FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        
+        return resp;
+    }
+    
+    public async Task<int> UpsertStreamElementsAuthForTwitchAccount(TwitchAccount? twitchAccount, string? seChannel, string? jwtToken, CancellationToken ct = default)
+    {
+        if (twitchAccount is null || string.IsNullOrEmpty(seChannel) || string.IsNullOrEmpty(jwtToken))
+            return 0;
+
+        var dbAccount = await context.TwitchAccount.Include(s => s.StreamElementsAuth).FirstOrDefaultAsync(s => s.TwitchAccountId == twitchAccount.TwitchAccountId, ct);
+
+        if (dbAccount is null)
+        {
+            logger.LogError("Twitch account not found when trying to upsert StreamElements auth. BroadcasterId: {broadcasterId}", twitchAccount.BroadcasterId);
+            return 0;
+        }
+
+        if (dbAccount.StreamElementsAuth is null)
+        {
+            logger.LogDebug("Creating new StreamElements auth for Twitch account. BroadcasterId: {broadcasterId}", twitchAccount.BroadcasterId);
+
+            var (seAuthToken, seAuthIv) = encryptionService.Encrypt(jwtToken);
+
+            var seAuth = new StreamElementsAuth
+            {
+                TwitchAccountId = twitchAccount.TwitchAccountId,
+                StreamElementsChannel = seChannel,
+                JwtToken = seAuthToken,
+                JwtTokenIv = seAuthIv
+            };
+            
+            context.StreamElementsAuth.Add(seAuth);
+        }
+        else
+        {
+            logger.LogDebug("Updating StreamElements auth for Twitch account. BroadcasterId: {broadcasterId}", twitchAccount.BroadcasterId);
+            
+            var seAuthEncrypted = encryptionService.Encrypt(jwtToken);
+            dbAccount.StreamElementsAuth.StreamElementsChannel = seChannel;
+            dbAccount.StreamElementsAuth.JwtToken = seAuthEncrypted.Item1;
+            dbAccount.StreamElementsAuth.JwtTokenIv = seAuthEncrypted.Item2;
+        }
+
+        if (context.ChangeTracker.HasChanges())
+            return await context.SaveChangesAsync(ct);
+
+        return 0;
+    }
+    
+    public async Task<StreamElementsAuth?> GetStreamElementsAuthForTwitchAccount(string? broadcasterId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(broadcasterId))
+            return null;
+
+        var dbAccount = await context.TwitchAccount.Include(s => s.StreamElementsAuth).AsNoTracking()
+            .FirstOrDefaultAsync(s => s.BroadcasterId == broadcasterId, ct);
+        
+        if (dbAccount?.StreamElementsAuth is null)
+            return null;
+
+        dbAccount.StreamElementsAuth.JwtToken = encryptionService.Decrypt(dbAccount.StreamElementsAuth.JwtToken,
+            dbAccount.StreamElementsAuth.JwtTokenIv);
+        
+        return dbAccount.StreamElementsAuth;
+    }
+
+    public async Task<List<TwitchAccount>?> GetAllAccountsWithStreamElementAuths(CancellationToken ct = default)
+    {
+        var accounts = await context.TwitchAccount.Include(s => s.StreamElementsAuth).AsNoTracking().Where(s => s.StreamElementsAuth != null).ToListAsync(ct);
+
+        var retList = new List<TwitchAccount>();
+        
+        foreach (var account in accounts)
+        {
+            if (account?.StreamElementsAuth is null)
+                continue;
+            
+            account.StreamElementsAuth.JwtToken = encryptionService.Decrypt(account.StreamElementsAuth.JwtToken, account.StreamElementsAuth.JwtTokenIv);
+            
+            retList.Add(account);
+        }
+        
+        return retList;
+    }
 }

@@ -16,4 +16,11 @@ public interface ITwitchDbService
     Task<List<string>?> GetAllSubscribedChannelBroadcasterIds(CancellationToken ct = default);
     Task<List<TwitchChatOverlaySettings>?> GetAllChatOverlaySettingsByBroadcasterId(string? broadcasterId,
         CancellationToken ct = default);
+    Task<TwitchAccount?> GetTwitchAccountDetailForStreamElementsAuth(string? broadcasterId,
+        CancellationToken ct = default);
+    
+    //se auth
+    Task<int> UpsertStreamElementsAuthForTwitchAccount(TwitchAccount? twitchAccount, string? seChannel, string? jwtToken, CancellationToken ct = default);
+    Task<StreamElementsAuth?> GetStreamElementsAuthForTwitchAccount(string? broadcasterId, CancellationToken ct = default);
+    Task<List<TwitchAccount>?> GetAllAccountsWithStreamElementAuths(CancellationToken ct = default);
 }

@@ -94,6 +94,20 @@ services:
       - "${TWITCH_ACCOUNT_API_EXTERNAL_PORT}:8080"
     networks:
       - ${DEFAULT_NETWORK}
+    
+  streamelements-service:
+    build:
+      context: ${BASE_APP_PATH}
+      dockerfile: ./Neon.StreamElementsService/Dockerfile
+    container_name: streamelements-service
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
+      - ConnectionStrings__NeonDb=Host=postgres;Port=5432;User Id=postgres;Password=postgres;Database=Neon
+      - BaseKafkaConfig__BootstrapServers=kafka:29092
+      - Serilog__WriteTo__0__Args__configure__0__Args__serverUrl=http://seq:5341
+      - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
+    networks:
+      - ${DEFAULT_NETWORK}
 
 networks:
   neon_network:

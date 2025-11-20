@@ -1,3 +1,4 @@
+using Neon.Account.Api.Services.StreamElements;
 using Neon.Account.Api.Services.Twitch;
 using Neon.Core.Extensions;
 using Neon.Core.Models;
@@ -19,6 +20,7 @@ builder.Services.Configure<NeonSettings>(builder.Configuration.GetSection("NeonS
 
 builder.Services.AddScoped<ITwitchAuthResponseService, TwitchAuthResponseService>();
 builder.Services.AddScoped<ITwitchAccountService, TwitchAccountService>();
+builder.Services.AddScoped<IStreamElementsService, StreamElementsService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
