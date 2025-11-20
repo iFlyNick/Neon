@@ -27,6 +27,10 @@ window.Overlay.onEventReceived = (msg) => {
     handleEvent(msg);
 };
 
+window.Overlay.onStreamElementsEventReceived = (msg) => {
+    handleStreamElementsEvent(msg);
+};
+
 function handleMessage(msg) {
     let username = msg.chatterName;
     let style = getChatterStyle(msg.chatterFlags, username);
@@ -61,6 +65,23 @@ function handleEvent(msg) {
     let newMsgId = `chat-message-${chatCounter}`;
     newMsg.id = newMsgId;
     
+    const chatContainer = document.querySelector('#chat-container');
+    chatContainer.appendChild(newMsg);
+
+    document.getElementById(newMsgId).scrollIntoView({ behavior: 'smooth' });
+    chatCounter++;
+
+    clearOldMessages();
+}
+
+function handleStreamElementsEvent(msg) {
+    let message = msg.eventMessage;
+    let messageStyle = msg.eventLevel;
+
+    let newMsg = buildNewEventMessage(message, messageStyle);
+    let newMsgId = `chat-message-${chatCounter}`;
+    newMsg.id = newMsgId;
+
     const chatContainer = document.querySelector('#chat-container');
     chatContainer.appendChild(newMsg);
 

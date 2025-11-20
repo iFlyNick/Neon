@@ -382,4 +382,16 @@ public class TwitchDbService(ILogger<TwitchDbService> logger, NeonDbContext cont
         
         return retList;
     }
+
+    public async Task<TwitchAccount?> GetTwitchAccountFromStreamElementsChannel(string? channelId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(channelId))
+            return null;
+
+        var dbAccount = await context.StreamElementsAuth.Include(s => s.TwitchAccount).AsNoTracking()
+            .FirstOrDefaultAsync(s => s.StreamElementsChannel == channelId, ct);
+        
+        return dbAccount?.TwitchAccount;
+    }
 }

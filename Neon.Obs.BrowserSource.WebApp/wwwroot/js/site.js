@@ -1,6 +1,7 @@
 ﻿window.Overlay = {
     onMessageReceived: null,
     onEventReceived: null,
+    onStreamElementsEventReceived: null,
     onInit: null,
     customUsers: null
 };
@@ -19,6 +20,12 @@ connection.on("ReceiveMessage", (data) => {
 connection.on("ReceiveEvent", (data) => {
     if (typeof window.Overlay.onEventReceived === "function") {
         window.Overlay.onEventReceived(data);
+    }
+});
+
+connection.on("ReceiveStreamElementsEvent", (data) => {
+    if (typeof window.Overlay.onStreamElementsEventReceived === "function") {
+        window.Overlay.onStreamElementsEventReceived(data);
     }
 });
 

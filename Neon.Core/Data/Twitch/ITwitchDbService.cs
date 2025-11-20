@@ -23,4 +23,5 @@ public interface ITwitchDbService
     Task<int> UpsertStreamElementsAuthForTwitchAccount(TwitchAccount? twitchAccount, string? seChannel, string? jwtToken, CancellationToken ct = default);
     Task<StreamElementsAuth?> GetStreamElementsAuthForTwitchAccount(string? broadcasterId, CancellationToken ct = default);
     Task<List<TwitchAccount>?> GetAllAccountsWithStreamElementAuths(CancellationToken ct = default);
+    Task<TwitchAccount?> GetTwitchAccountFromStreamElementsChannel(string? channelId, CancellationToken ct = default);
 }

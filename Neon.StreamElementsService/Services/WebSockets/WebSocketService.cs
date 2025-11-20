@@ -138,7 +138,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
         if (string.IsNullOrEmpty(message))
             return;
         
-        logger.LogDebug(message);
+        logger.LogTrace("Received event message from streamelements: {message}", message);
 
         Message? seMessage = null;
         try

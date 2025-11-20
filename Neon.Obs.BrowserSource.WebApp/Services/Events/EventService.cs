@@ -40,7 +40,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
 
     private static string? GetStandardEventType(string? eventType)
     {
-        return eventType?.ToLower() switch
+        return eventType?.ToLowerInvariant() switch
         {
             "channel.follow" => "follow",
             "channel.subscription.gift" => "gift-sub",
@@ -76,7 +76,7 @@ public class EventService(ILogger<EventService> logger) : IEventService
             return null;
         }
         
-        return eventType?.ToLower() switch
+        return eventType?.ToLowerInvariant() switch
         {
             "follow" => $"{message?.Payload?.Event?.UserName} followed!",
             "gift-sub" => giftSubMessage,
@@ -93,10 +93,10 @@ public class EventService(ILogger<EventService> logger) : IEventService
     {
         return eventType?.ToLowerInvariant() switch
         {
-            "raid" => "high",
-            "gift-sub" => int.TryParse(message?.Payload?.Event?.Total, out var count) && count >= 5 ? "high" : "medium", 
+            "raid" => "large",
+            "gift-sub" => int.TryParse(message?.Payload?.Event?.Total, out var count) && count >= 5 ? "large" : "medium", 
             "sub" or "resub" => "medium",
-            "cheer" => (message?.Payload?.Event?.Bits ?? 0) >= 1000 ? "high" : "medium",
+            "cheer" => (message?.Payload?.Event?.Bits ?? 0) >= 1000 ? "large" : "medium",
             _ => "small"
         };
     }
