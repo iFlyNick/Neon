@@ -1,4 +1,5 @@
-﻿using Neon.StreamElementsService.Events;
+﻿using System.Net.WebSockets;
+using Neon.StreamElementsService.Events;
 using Neon.StreamElementsService.Models;
 
 namespace Neon.StreamElementsService.Services.WebSockets;
@@ -6,6 +7,7 @@ namespace Neon.StreamElementsService.Services.WebSockets;
 public interface IWebSocketService
 {
     bool IsConnected();
+    public WebSocketState? GetWebSocketState();
     
     Task ConnectAsync(CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);

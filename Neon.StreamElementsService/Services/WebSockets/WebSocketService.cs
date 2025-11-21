@@ -14,6 +14,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
     private ClientWebSocket? _client;
     
     public bool IsConnected() => WsConnected;
+    public WebSocketState? GetWebSocketState() => _client?.State ?? WebSocketState.Closed;
     private bool WsConnected => (_client?.State ?? WebSocketState.None) == WebSocketState.Open;
     
     private const int RetryCount = 5;
@@ -166,6 +167,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
                 break;
             case "response":
                 logger.LogDebug("Received response from streamelements: {message}", JsonConvert.SerializeObject(seMessage.Data, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
+                break;
+            default:
+                logger.LogDebug("Unhandled StreamElements WebSocket message type: {messageType} | Message: {message}", seMessage.Type, JsonConvert.SerializeObject(seMessage.Data, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
                 break;
         }
 

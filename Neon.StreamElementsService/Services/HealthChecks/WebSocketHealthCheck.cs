@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Neon.Core.Services.Kafka;
 using Neon.StreamElementsService.Models;
 using Neon.StreamElementsService.Models.Kafka;
 using Neon.StreamElementsService.Services.WebSocketManagers;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Neon.StreamElementsService.Services.HealthChecks;
 
@@ -21,9 +22,12 @@ public class WebSocketHealthCheck(ILogger<WebSocketHealthCheck> logger, IService
         using var scope = serviceScopeFactory.CreateScope();
         var wsServices = webSocketManager.GetWebSocketServices().ToList();
 
-        var wsStatuses = wsServices.Select(ws => (ws.GetHashCode().ToString(), ws.IsConnected() ? "Connected" : "Disconnected")).ToList();
+        var wsStatuses = wsServices.Select(ws => (ws.GetHashCode().ToString(), ws.IsConnected() ? "Connected" : "Disconnected", ws.GetWebSocketState().ToString())).ToList();
 
-        var wsStatusesJson = JsonSerializer.Serialize(wsStatuses);
+        foreach (var (hash, isConnected, wsState) in wsStatuses)
+            logger.LogDebug("WebSocket Service Hash: {hash} | IsConnected: {isConnected} | State: {state}", hash, isConnected, wsState);
+        
+        var wsStatusesJson = JsonConvert.SerializeObject(wsStatuses);
         
         string? msg;
         HealthCheckResult healthCheckResult;
