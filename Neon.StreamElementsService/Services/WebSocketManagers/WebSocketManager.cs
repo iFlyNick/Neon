@@ -18,6 +18,9 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
     //map of broadcaster id to se room id
     private readonly Dictionary<string, string> _channels = new();
     
+    public IList<IWebSocketService> GetWebSocketServices() => _webSocketServices.AsReadOnly();
+    private readonly List<IWebSocketService> _webSocketServices = [];
+    
     private void OnNotificationEvent(object? sender, NotificationEventArgs e) => _ = HandleNotificationEvent(sender, e);
     private void OnWebsocketClosedEvent(object? sender, WebsocketClosedEventArgs e) => _ = HandleWebsocketClosedEvent(sender, e);
     
@@ -35,7 +38,7 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
             var seChannel = seMessage.Data?.Channel;
             if (string.IsNullOrEmpty(seChannel))
             {
-                logger.LogDebug("OnNotificationEvent: Channel is null!");
+                logger.LogDebug("OnNotificationEvent: StreamElements channel is null!");
                 return;
             }
             
@@ -62,14 +65,15 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
     
     private async Task HandleWebsocketClosedEvent(object? sender, WebsocketClosedEventArgs e)
     {
-        logger.LogDebug("Websocket closed event raised. Reason: {reason}", e.Reason);
+        logger.LogDebug("StreamElements Websocket closed event raised. Reason: {reason}", e.Reason);
+        _webSocketServices.Clear();
     }
 
     public async Task Subscribe(string? broadcasterId, string? channelId, string? jwtToken, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(broadcasterId) || string.IsNullOrEmpty(channelId) || string.IsNullOrEmpty(jwtToken))
         {
-            logger.LogDebug("WebSocketManager Subscribe: Missing broadcasterId, channelId or jwtToken!");
+            logger.LogDebug("StreamElements WebSocketManager Subscribe: Missing broadcasterId, channelId or jwtToken!");
             return;
         }
         
@@ -78,6 +82,9 @@ public class WebSocketManager(ILogger<WebSocketManager> logger, IServiceScopeFac
         
         webSocketService.OnNotificationEvent += OnNotificationEvent;
         webSocketService.OnWebsocketClosedEvent += OnWebsocketClosedEvent;
+        
+        if (!_webSocketServices.Contains(webSocketService))
+            _webSocketServices.Add(webSocketService);
         
         _channels[channelId] = broadcasterId;
         

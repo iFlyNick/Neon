@@ -1,13 +1,16 @@
 ﻿using Microsoft.Extensions.Options;
 using Neon.Core.Data.Twitch;
 using Neon.Core.Models;
+using Neon.Core.Services.Http;
+using Neon.TwitchService.Models;
 using Neon.TwitchService.Services.WebSocketManagers;
 
 namespace Neon.TwitchService.Services;
 
-public class StartupService(ILogger<StartupService> logger, IWebSocketManager webSocketManager, IServiceScopeFactory serviceScopeFactory, IOptions<NeonSettings> neonSettings) : IHostedService
+public class StartupService(ILogger<StartupService> logger, IWebSocketManager webSocketManager, IServiceScopeFactory serviceScopeFactory, IOptions<NeonSettings> neonSettings, IOptions<NeonStartupSettings> startupSettings) : IHostedService
 {
     private readonly NeonSettings _neonSettings = neonSettings.Value;
+    private readonly NeonStartupSettings _startupSettings = startupSettings.Value;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -25,9 +28,10 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
     {
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var scope = serviceScopeFactory.CreateScope();
             var dbService = scope.ServiceProvider.GetRequiredService<ITwitchDbService>();
+            var httpService = scope.ServiceProvider.GetRequiredService<IHttpService>();
             
             if (string.IsNullOrEmpty(_neonSettings.AppName))
             {
@@ -48,6 +52,10 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
                 logger.LogCritical("Bot chat account not found for app name: {appName}", _neonSettings.AppName);
                 return;
             }
+
+            logger.LogDebug("Sending request to emote api to preload global emotes");
+            await httpService.PostAsync($"{_startupSettings.EmoteApiUrl}{_startupSettings.EmoteChannelUri}", null, null, null, null, cts.Token);
+            logger.LogDebug("Emote api global emotes preload request sent successfully");
             
             foreach (var account in subscribedAccounts)
             {
@@ -63,6 +71,13 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
                 //now connect the bot to the channel too
                 await webSocketManager.SubscribeUserToChat(botChatAccount.BroadcasterId, account.BroadcasterId, cts.Token);
                 logger.LogInformation("Subscribed bot to chat for channel: {channelName}", account.BroadcasterId);
+                
+                logger.LogDebug("Sending request to emote api to preload emotes for channel: {broadcasterId}", account.BroadcasterId);
+                //AllChannelEmotes?broadcasterId={broadcasterChannelId}
+                await httpService.PostAsync(
+                    $"{_startupSettings.EmoteApiUrl}{_startupSettings.EmoteChannelUri}?broadcasterId={account.BroadcasterId}",
+                    null, null, null, null, cts.Token);
+                logger.LogDebug("Emote api emotes preload request sent successfully for channel: {broadcasterId}", account.BroadcasterId);
             }
         }
         catch (Exception ex)

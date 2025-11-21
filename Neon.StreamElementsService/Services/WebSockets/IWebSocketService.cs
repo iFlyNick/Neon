@@ -5,6 +5,8 @@ namespace Neon.StreamElementsService.Services.WebSockets;
 
 public interface IWebSocketService
 {
+    bool IsConnected();
+    
     Task ConnectAsync(CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);
     Task SubscribeEventAsync(SubscriptionRequest? request, CancellationToken ct = default);

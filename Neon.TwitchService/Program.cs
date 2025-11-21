@@ -4,6 +4,7 @@ using Neon.Core.Models;
 using Neon.Core.Models.Twitch;
 using Neon.Core.Services.Http;
 using Neon.Core.Services.Kafka;
+using Neon.TwitchService.Models;
 using Neon.TwitchService.Models.Kafka;
 using Neon.TwitchService.Services;
 using Neon.TwitchService.Services.HealthChecks;
@@ -24,6 +25,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.Configure<TwitchSettings>(hostContext.Configuration.GetSection("TwitchSettings"));
         services.Configure<NeonSettings>(hostContext.Configuration.GetSection("NeonSettings"));
         services.Configure<BaseKafkaConfig>(hostContext.Configuration.GetSection("BaseKafkaConfig"));
+        services.Configure<NeonStartupSettings>(hostContext.Configuration.GetSection("NeonStartupSettings"));
 
         //use named clients instead to avoid swapping auth headers around
         services.AddHttpClient();

@@ -47,7 +47,7 @@ public class KafkaService(ILogger<KafkaService> logger) : IKafkaService
     {
         if (config?.BootstrapServers is null)
         {
-            logger.LogError("Invalid producer config passed to ProduceAsync method or config bootstrap servers is undefined. Aborting produce call.");
+            logger.LogError("Invalid producer config passed to ProduceAsync method or config bootstrap servers is undefined. Aborting produce call. Config is null: {isNull} | BootstrapServers: {bootstrapServers}", config is null, config?.BootstrapServers ?? "no value");
             return;
         }
         

@@ -13,7 +13,9 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
     
     private ClientWebSocket? _client;
     
+    public bool IsConnected() => WsConnected;
     private bool WsConnected => (_client?.State ?? WebSocketState.None) == WebSocketState.Open;
+    
     private const int RetryCount = 5;
     private readonly TimeSpan _retryDelay = TimeSpan.FromSeconds(10);
     
@@ -157,9 +159,16 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
             return;
         }
         
-        if (seMessage.Type == "message")
-            OnNotificationReceived(seMessage);
-        
+        switch (seMessage.Type)
+        {
+            case "message":
+                OnNotificationReceived(seMessage);
+                break;
+            case "response":
+                logger.LogDebug("Received response from streamelements: {message}", JsonConvert.SerializeObject(seMessage.Data, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
+                break;
+        }
+
         logger.LogDebug("StreamElements WebSocket message type received: {messageType}", seMessage.Type);
     }
     

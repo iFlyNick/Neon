@@ -22,4 +22,10 @@ public class MessageData
     public string? UpdatedAt { get; set; }
     [JsonProperty("transactionId")]
     public string? TransactionId { get; set; }
+    [JsonProperty("message")]
+    public string? Message { get; set; }
+    [JsonProperty("room")]
+    public string? Room { get; set; }
+    [JsonProperty("topic")]
+    public string? Topic { get; set; }
 }
