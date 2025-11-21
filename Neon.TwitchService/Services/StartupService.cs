@@ -54,7 +54,7 @@ public class StartupService(ILogger<StartupService> logger, IWebSocketManager we
             }
 
             logger.LogDebug("Sending request to emote api to preload global emotes");
-            await httpService.PostAsync($"{_startupSettings.EmoteApiUrl}{_startupSettings.EmoteChannelUri}", null, null, null, null, cts.Token);
+            await httpService.PostAsync($"{_startupSettings.EmoteApiUrl}{_startupSettings.EmoteGlobalUri}", null, null, null, null, cts.Token);
             logger.LogDebug("Emote api global emotes preload request sent successfully");
             
             foreach (var account in subscribedAccounts)

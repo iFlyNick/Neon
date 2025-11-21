@@ -12,7 +12,7 @@ services:
       - BaseKafkaConfig__BootstrapServers=kafka:29092
       - Serilog__WriteTo__0__Args__configure__0__Args__serverUrl=http://seq:5341
       - NeonSettings__EncryptionKey=${ENCRYPTION_KEY}
-      - NeonStartupSettings__EmoteApiUrl=http://emote-service:8080
+      - NeonStartupSettings__EmoteApiUrl=http://emote-service:8080/api/Emotes/v1/
     networks:
       - ${DEFAULT_NETWORK}
 
