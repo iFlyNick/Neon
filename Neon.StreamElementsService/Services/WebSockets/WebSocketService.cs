@@ -12,6 +12,7 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
     private readonly StreamElementsConfig _seConfig = seConfig.Value;
     
     private ClientWebSocket? _client;
+    private SubscriptionRequest? _subscriptionRequest;
     
     public bool IsConnected() => WsConnected;
     public WebSocketState? GetWebSocketState() => _client?.State ?? WebSocketState.Closed;
@@ -40,6 +41,12 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
         {
             logger.LogDebug("StreamElements WebSocket Client is already connected.");
             return;
+        }
+
+        if (_client is not null && (_client.State != WebSocketState.Open))
+        {
+            logger.LogInformation("Disposing existing StreamElements WebSocket Client with state: {state} | Hash: {hash}", _client.State, GetHashCode());
+            _client.Dispose();
         }
         
         _client = new ClientWebSocket();
@@ -207,9 +214,36 @@ public class WebSocketService(ILogger<WebSocketService> logger, IOptions<StreamE
             logger.LogDebug("StreamElements WebSocket subscribe request is null. Nothing defined to subscribe to!");
             return;
         }
+
+        _subscriptionRequest = request;
         
         var jsonRequest = JsonConvert.SerializeObject(request);
         var bytes = Encoding.UTF8.GetBytes(jsonRequest);
         await _client!.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, ct);
+        
+        //start monitoring connection in background
+        _ = Task.Run(async () => await MonitorConnectionAsync(ct), ct);
+    }
+    
+    private async Task MonitorConnectionAsync(CancellationToken ct = default)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            if (!WsConnected)
+            {
+                logger.LogWarning("WebSocket connection lost. Attempting to reconnect...");
+                await TryConnectAsync(ct);
+                
+                if (_subscriptionRequest is not null)
+                {
+                    logger.LogInformation("Resubscribing to previous subscription request after reconnection.");
+                    await SubscribeEventAsync(_subscriptionRequest, ct);
+                }
+
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+        }
     }
 }
